@@ -1,6 +1,7 @@
 import type { Player, Transport, TransportCallbacks } from "./types";
 import { getSupabase } from "./supabase";
 import { isPlayer, mergePresence } from "./transport";
+import { createChatGate, normalizeChat } from "./chat";
 export function createSupabaseTransport(
   initial: Player,
   callbacks: TransportCallbacks,
@@ -10,10 +11,11 @@ export function createSupabaseTransport(
   let peers: Player[] = [];
   let ready = false;
   let closed = false;
+  const chatGate = createChatGate();
   const channel = client.channel(`world:${self.world_id}`, {
     config: {
       private: true,
-      broadcast: { self: false },
+      broadcast: { self: false, ack: true },
       presence: { key: self.session_id },
     },
   });
@@ -25,6 +27,11 @@ export function createSupabaseTransport(
       });
   };
   channel
+    .on("broadcast", { event: "world_chat" }, ({ payload }) => {
+      if (closed || !ready) return;
+      const message = chatGate.receive(payload, self.world_id, peers);
+      if (message) callbacks.chat?.(message);
+    })
     .on("presence", { event: "sync" }, () => {
       peers = mergePresence(
         Object.values(channel.presenceState()).flat(),
@@ -86,6 +93,32 @@ export function createSupabaseTransport(
   // Low-frequency snapshots let late joiners see the current position without writing movement to the database.
   const heartbeat = setInterval(track, 5000);
   return {
+    async chat(value) {
+      const text = normalizeChat(value);
+      if (!ready || closed)
+        throw new Error("연결이 끊겨 메시지를 보내지 못했어요.");
+      if (!text) throw new Error("메시지는 1~200자로 입력해 주세요.");
+      if (!chatGate.send())
+        throw new Error("잠시 후 다시 보내 주세요. (1초 간격)");
+      const packet = {
+        id: crypto.randomUUID(),
+        session_id: self.session_id,
+        world_id: self.world_id,
+        text,
+      };
+      const result = await channel.send({
+        type: "broadcast",
+        event: "world_chat",
+        payload: packet,
+      });
+      if (result !== "ok" || closed)
+        throw new Error("전송하지 못했어요. 연결을 확인하고 다시 보내 주세요.");
+      callbacks.chat?.({
+        ...packet,
+        nickname: self.nickname,
+        receivedAt: Date.now(),
+      });
+    },
     move(position, room_id) {
       const changed = room_id !== self.room_id;
       self = { ...self, ...position, room_id };

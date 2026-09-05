@@ -12,7 +12,15 @@ import {
   type Avatar as AvatarType,
   type Status,
 } from "@/lib/types";
-export function ProfileForm({ settings = false }: { settings?: boolean }) {
+export function ProfileForm({
+  settings = false,
+  embedded = false,
+  onSaved,
+}: {
+  settings?: boolean;
+  embedded?: boolean;
+  onSaved?(): void;
+}) {
   const session = useSession();
   const router = useRouter();
   const [nickname, setNickname] = useState("");
@@ -21,6 +29,7 @@ export function ProfileForm({ settings = false }: { settings?: boolean }) {
   const [status, setStatus] = useState<Status>("online");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const Content = embedded ? "div" : "main";
   useEffect(() => {
     if (session.loading) return;
     if (!session.demo && !session.user) {
@@ -55,7 +64,8 @@ export function ProfileForm({ settings = false }: { settings?: boolean }) {
         team_id: teamId,
         status,
       });
-      router.push("/world");
+      if (onSaved) onSaved();
+      else router.push("/world");
     } catch (e) {
       setError(e instanceof Error ? e.message : "저장에 실패했어요.");
     } finally {
@@ -71,14 +81,16 @@ export function ProfileForm({ settings = false }: { settings?: boolean }) {
     }
   }
   return (
-    <div className="onboarding-page">
-      <header className="landing-nav">
-        <Brand />
-        <Link className="back-link" href={settings ? "/world" : "/"}>
-          ← {settings ? "월드로 돌아가기" : "처음으로"}
-        </Link>
-      </header>
-      <main className="onboarding-main">
+    <div className={embedded ? "embedded-profile" : "onboarding-page"}>
+      {!embedded && (
+        <header className="landing-nav">
+          <Brand />
+          <Link className="back-link" href={settings ? "/world" : "/"}>
+            ← {settings ? "월드로 돌아가기" : "처음으로"}
+          </Link>
+        </header>
+      )}
+      <Content className="onboarding-main">
         <div className="onboarding-heading">
           <span className="eyebrow">
             {settings ? "YOUR ADVENTURER" : "A NEW CHAPTER BEGINS"}
@@ -218,10 +230,12 @@ export function ProfileForm({ settings = false }: { settings?: boolean }) {
             )}
           </form>
         )}
-      </main>
-      <footer className="simple-footer">
-        5 GUILDS <span>✦</span> 1 WORLD <span>✦</span> YOUR PARTY
-      </footer>
+      </Content>
+      {!embedded && (
+        <footer className="simple-footer">
+          5 GUILDS <span>✦</span> 1 WORLD <span>✦</span> YOUR PARTY
+        </footer>
+      )}
     </div>
   );
 }

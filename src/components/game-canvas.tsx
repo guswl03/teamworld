@@ -8,7 +8,9 @@ import {
 } from "react";
 import type { WorldController } from "@/game/create-world";
 import type { Player, Position, Profile, Team } from "@/lib/types";
+import type { Adventure } from "@/game/adventure-model";
 export interface GameHandle {
+  focus(): void;
   travel(room: string): void;
   zoom(amount: number): void;
 }
@@ -19,15 +21,37 @@ export const GameCanvas = forwardRef<
     peers: Player[];
     teams: Team[];
     profile: Profile;
+    adventure: Adventure;
+    suspended?: boolean;
+    onInteract(position: Position): void;
     onMove(position: Position, room: string): void;
   }
->(function GameCanvas({ player, peers, teams, profile, onMove }, ref) {
+>(function GameCanvas(
+  {
+    player,
+    peers,
+    teams,
+    profile,
+    adventure,
+    suspended = false,
+    onInteract,
+    onMove,
+  },
+  ref,
+) {
   const parent = useRef<HTMLDivElement>(null);
   const controller = useRef<WorldController | null>(null);
   const lastPosition = useRef<Position>(player);
   const lastRoom = useRef(player.room_id);
-  const latest = useRef({ peers, profile, onMove });
-  latest.current = { peers, profile, onMove };
+  const latest = useRef({
+    peers,
+    profile,
+    adventure,
+    suspended,
+    onInteract,
+    onMove,
+  });
+  latest.current = { peers, profile, adventure, suspended, onInteract, onMove };
   const [ready, setReady] = useState(false);
   const [error, setError] = useState("");
   const [desktop, setDesktop] = useState(false);
@@ -41,6 +65,7 @@ export const GameCanvas = forwardRef<
   useImperativeHandle(
     ref,
     () => ({
+      focus: () => controller.current?.focus(),
       travel: (room) => controller.current?.travel(room),
       zoom: (amount) => controller.current?.zoom(amount),
     }),
@@ -61,6 +86,7 @@ export const GameCanvas = forwardRef<
             room_id: lastRoom.current,
           },
           teams,
+          onInteract: (position) => latest.current.onInteract(position),
           onMove: (position, room) => {
             lastPosition.current = position;
             lastRoom.current = room;
@@ -72,6 +98,8 @@ export const GameCanvas = forwardRef<
         });
         controller.current.players(latest.current.peers);
         controller.current.profile(latest.current.profile);
+        controller.current.adventure(latest.current.adventure);
+        controller.current.controls(!latest.current.suspended);
       })
       .catch(() => {
         if (!disposed)
@@ -90,6 +118,12 @@ export const GameCanvas = forwardRef<
   useEffect(() => {
     controller.current?.profile(profile);
   }, [profile]);
+  useEffect(() => {
+    controller.current?.adventure(adventure);
+  }, [adventure]);
+  useEffect(() => {
+    controller.current?.controls(!suspended);
+  }, [suspended]);
   return (
     <div className="game-container">
       <div className="game-mount" ref={parent} />

@@ -1,0 +1,1158 @@
+.world-workspace {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  isolation: isolate;
+  background: #72b7b4;
+  color: #31483f;
+}
+.workspace-stage {
+  position: absolute;
+  inset: 0;
+}
+.workspace-stage .game-container,
+.workspace-stage .game-mount {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+.workspace-stage canvas {
+  display: block;
+  outline: none;
+}
+.workspace-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    #193d3c55,
+    transparent 25%,
+    transparent 73%,
+    #163c3866
+  );
+}
+.workspace-header {
+  position: absolute;
+  top: 24px;
+  left: 28px;
+  right: 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  pointer-events: none;
+}
+.workspace-header > * {
+  pointer-events: auto;
+}
+.workspace-brand {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 12px 20px;
+  border: 1px solid #ffffff80;
+  border-radius: 0;
+  background: #fbfaeedf;
+  backdrop-filter: none;
+  box-shadow: 0 8px 28px #193d3c12;
+}
+.workspace-brand > span {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #798773;
+  border-left: 1px solid #cbd4bf;
+  padding-left: 20px;
+}
+.workspace-presence {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.workspace-online,
+.workspace-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fbfaeef2;
+  border: 1px solid #ffffff88;
+  border-radius: 0;
+  padding: 10px 15px;
+  box-shadow: 0 6px 24px #193d3c18;
+}
+.workspace-online {
+  font-size: 11px;
+  min-height: 52px;
+}
+.workspace-profile > span {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  gap: 4px;
+}
+.workspace-profile strong {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.workspace-profile small {
+  color: #8b977a;
+  font-size: 10px;
+}
+.workspace-location {
+  position: absolute;
+  top: 116px;
+  left: 32px;
+  color: #fffbea;
+  text-shadow: 0 2px 5px #244a42;
+  pointer-events: none;
+}
+.workspace-location .tiny-label {
+  color: #fffbea;
+  font-size: 8px;
+  letter-spacing: 2px;
+}
+.workspace-location h1 {
+  font-size: 25px;
+  margin: 8px 0 6px;
+  font-weight: 500;
+}
+.workspace-location h1 span {
+  font-size: 15px;
+  margin-left: 14px;
+  color: #f7dfa1;
+}
+.workspace-location > span:last-child {
+  font: 10px monospace;
+  opacity: 0.85;
+}
+.workspace-objective {
+  position: absolute;
+  left: 28px;
+  top: 218px;
+  width: 242px;
+  padding: 18px;
+  background: #fffcedeb;
+  border: 1px solid #f8fff3a8;
+  border-radius: 0;
+  text-align: left;
+  box-shadow: 0 8px 28px #21433820;
+  backdrop-filter: none;
+}
+.workspace-objective > span {
+  display: block;
+  font: 9px monospace;
+  letter-spacing: 2px;
+  color: #9a9676;
+}
+.workspace-objective i {
+  float: right;
+  font-style: normal;
+}
+.workspace-objective strong {
+  display: block;
+  font-size: 12px;
+  line-height: 1.8;
+  font-weight: 500;
+  margin: 12px 0;
+}
+.workspace-objective small {
+  color: #8c997b;
+  font-size: 9px;
+}
+.workspace-dock {
+  position: absolute;
+  z-index: 20;
+  left: 50%;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  gap: 5px;
+  padding: 8px;
+  border-radius: 0;
+  background: #fffdeef2;
+  backdrop-filter: none;
+  border: 1px solid #ffffffbb;
+  box-shadow:
+    0 10px 45px #173a3955,
+    inset 0 1px #fff;
+}
+.workspace-dock button {
+  position: relative;
+  width: 70px;
+  height: 62px;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 5px;
+}
+.workspace-dock button > span {
+  font-size: 24px;
+  line-height: 1;
+  color: #667e61;
+}
+.workspace-dock strong {
+  font-size: 10px;
+  font-weight: 500;
+}
+.workspace-dock button:hover {
+  background: #e9eddc;
+  transform: translateY(-2px);
+}
+.workspace-dock .active {
+  background: #415d4d;
+  color: #fffae2;
+}
+.workspace-dock .active > span {
+  color: #f2dfac;
+}
+.workspace-dock .active:hover {
+  background: #415d4d;
+}
+.workspace-dock small {
+  position: absolute;
+  right: 10px;
+  top: 4px;
+  font-size: 8px;
+  border-radius: 0;
+  min-width: 15px;
+  padding: 2px;
+  background: #dddcb9;
+  color: #425d4a;
+}
+.workspace-control-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 113px;
+  transform: translateX(-50%);
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: #fff9dd;
+  text-shadow: 0 2px 4px #174134;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.workspace-map-tools {
+  position: absolute;
+  right: 28px;
+  bottom: 28px;
+  display: flex;
+  background: #fffcecea;
+  border: 1px solid #ffffffbb;
+  border-radius: 0;
+  overflow: hidden;
+  box-shadow: 0 4px 20px #20483522;
+}
+.workspace-map-tools button {
+  width: 38px;
+  height: 40px;
+  font-size: 20px;
+  border-right: 1px solid #dce1c7;
+}
+.workspace-chat-preview {
+  position: absolute;
+  bottom: 28px;
+  left: 28px;
+  max-width: 280px;
+  padding: 13px 16px;
+  background: #fbfaeef0;
+  border-radius: 0;
+  text-align: left;
+  box-shadow: 0 5px 24px #234b4222;
+}
+.workspace-chat-preview > span {
+  font-size: 10px;
+  color: #748b66;
+}
+.workspace-chat-preview p {
+  font-size: 11px;
+  margin: 6px 0 0;
+  max-width: 250px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.workspace-interaction {
+  position: absolute;
+  bottom: 151px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 18px;
+  border-radius: 0;
+  background: #fffbe6ef;
+  border: 1px solid #fafde7;
+  box-shadow: 0 6px 25px #213f3b25;
+  font-size: 12px;
+}
+.workspace-interaction kbd {
+  background: #47604a;
+  color: #fff7da;
+  padding: 6px 9px;
+  border-radius: 0;
+}
+.workspace-alert {
+  position: absolute;
+  top: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 20px;
+  background: #fff4d9;
+  border-radius: 0;
+  z-index: 25;
+  font-size: 12px;
+}
+.workspace-alert button {
+  margin-left: 14px;
+  text-decoration: underline;
+}
+.world-task-window {
+  position: absolute;
+  z-index: 30;
+  top: 100px;
+  right: 28px;
+  bottom: 135px;
+  width: min(440px, calc(100% - 56px));
+  display: flex;
+  flex-direction: column;
+  border-radius: 0;
+  border: 1px solid #fffef6;
+  background: #fcfbf3f5;
+  box-shadow:
+    0 25px 80px #173d3e55,
+    0 4px 12px #25463c22;
+  backdrop-filter: none;
+  overflow: hidden;
+  outline: none;
+}
+.world-task-window[hidden] {
+  display: none;
+}
+.task-window-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e0e5d7;
+  flex: none;
+}
+.task-window-heading span {
+  font: 8px monospace;
+  letter-spacing: 2px;
+  color: #939e87;
+}
+.task-window-heading h2 {
+  font-size: 19px;
+  margin: 8px 0 0;
+  font-weight: 500;
+}
+.task-window-heading button {
+  width: 34px;
+  height: 34px;
+  border-radius: 0;
+  background: #eef0e3;
+  color: #829273;
+  font-size: 24px;
+}
+.task-window-body {
+  padding: 22px 24px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  min-height: 0;
+  flex: 1;
+}
+.task-window-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  padding: 12px 24px;
+  border-top: 1px solid #e1e7d6;
+  font-size: 9px;
+  color: #8c987d;
+}
+.task-window-footer > span {
+  margin-left: auto;
+}
+.task-window-footer kbd {
+  border: 1px solid #dce2d0;
+  border-radius: 0;
+  padding: 2px 4px;
+}
+.task-chat .task-window-body {
+  display: flex;
+  flex-direction: column;
+}
+.task-chat .world-chat {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+}
+.task-chat .chat-heading {
+  display: none;
+}
+.task-chat .chat-notice {
+  margin: 0 0 16px;
+  font-size: 10px;
+}
+.task-chat .chat-messages {
+  min-height: 70px;
+}
+.task-chat .chat-compose input {
+  font-size: 13px;
+  padding: 10px;
+}
+.task-chat .chat-compose button {
+  width: 38px;
+  height: 38px;
+}
+.task-chat .chat-message strong {
+  font-size: 11px;
+}
+.task-chat .chat-input-note {
+  font-size: 9px;
+}
+.task-window-body .roster {
+  max-height: none;
+  overflow: visible;
+  padding: 14px 0;
+}
+.task-window-body .adventure-journal {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.inventory-only > :not(.inventory):not(.local-progress-note):not(.chat-error) {
+  display: none;
+}
+.inventory-only .inventory {
+  margin-top: 0;
+  padding: 30px 20px;
+}
+.inventory-only .hat-preview {
+  font-size: 56px;
+  padding: 20px;
+}
+.workspace-empty {
+  font-size: 12px;
+  line-height: 1.9;
+  color: #8b977d;
+}
+.workspace-demo-note {
+  margin-top: 24px;
+  padding: 16px;
+  border-radius: 0;
+  background: #eef0e3;
+  font-size: 10px;
+  color: #7b8d70;
+}
+.workspace-demo-note a {
+  display: block;
+  margin-top: 8px;
+  text-decoration: underline;
+}
+.task-settings {
+  width: min(620px, calc(100% - 56px));
+}
+.embedded-profile .onboarding-main {
+  width: auto;
+  max-width: none;
+  padding: 0;
+  margin: 0;
+}
+.embedded-profile .onboarding-heading {
+  display: none;
+}
+.embedded-profile .profile-form {
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.embedded-profile .character-grid {
+  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.embedded-profile .character-card {
+  padding: 12px 4px;
+  min-height: 0;
+}
+.embedded-profile .character-card strong {
+  font-size: 10px;
+}
+.embedded-profile .character-card > span:last-of-type {
+  display: none;
+}
+.embedded-profile .character-portrait {
+  width: 64px;
+  height: 72px;
+}
+.embedded-profile .character-portrait svg {
+  width: 58px;
+  height: 64px;
+}
+.embedded-profile .form-two-columns {
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+.embedded-profile .form-bottom {
+  gap: 10px;
+  margin-top: 20px;
+}
+.embedded-profile .form-bottom > span {
+  display: none;
+}
+.embedded-profile .form-bottom .button {
+  width: 100%;
+}
+.workspace-mobile-note {
+  display: none;
+}
+@media (max-width: 1050px) {
+  .workspace-brand > span {
+    display: none;
+  }
+  .workspace-chat-preview {
+    bottom: 140px;
+    max-width: 220px;
+  }
+  .workspace-map-tools {
+    bottom: 140px;
+  }
+  .workspace-objective {
+    width: 210px;
+  }
+}
+@media (max-width: 760px) {
+  .workspace-header {
+    left: 16px;
+    right: 16px;
+    top: 16px;
+  }
+  .workspace-brand {
+    padding: 10px 12px;
+  }
+  .workspace-brand .brand {
+    font-size: 17px;
+  }
+  .workspace-online {
+    display: none;
+  }
+  .workspace-location {
+    left: 20px;
+    top: 100px;
+  }
+  .workspace-objective {
+    left: 16px;
+    top: 190px;
+    width: 185px;
+    padding: 14px;
+  }
+  .world-task-window {
+    right: 16px;
+    width: min(440px, calc(100% - 32px));
+    top: 88px;
+    bottom: 122px;
+  }
+  .workspace-dock {
+    bottom: max(16px, env(safe-area-inset-bottom));
+  }
+  .workspace-dock button {
+    width: 53px;
+  }
+  .workspace-control-hint {
+    bottom: 104px;
+    font-size: 8px;
+  }
+  .workspace-map-tools {
+    right: 16px;
+  }
+  .workspace-chat-preview {
+    left: 16px;
+  }
+}
+@media (max-width: 600px) {
+  .world-workspace {
+    background: radial-gradient(ellipse at 30% 20%, #9caf82, #4b786f);
+  }
+  .workspace-stage {
+    display: none;
+  }
+  .workspace-location {
+    top: 94px;
+  }
+  .workspace-objective,
+  .workspace-map-tools,
+  .workspace-control-hint,
+  .workspace-interaction,
+  .workspace-chat-preview {
+    display: none;
+  }
+  .workspace-mobile-note {
+    display: block;
+    position: absolute;
+    top: 43%;
+    left: 20px;
+    right: 20px;
+    text-align: center;
+    color: #fff9e0;
+    transform: translateY(-50%);
+  }
+  .workspace-mobile-note > span {
+    font-size: 48px;
+  }
+  .workspace-mobile-note h2 {
+    font-size: 20px;
+    font-weight: 500;
+    margin: 20px 0 10px;
+  }
+  .workspace-mobile-note p {
+    font-size: 11px;
+    opacity: 0.8;
+  }
+  .workspace-profile {
+    padding: 6px 10px;
+  }
+  .workspace-profile strong {
+    max-width: 90px;
+  }
+  .workspace-brand .brand-word {
+    font-size: 16px;
+  }
+  .workspace-dock {
+    gap: 2px;
+    padding: 6px;
+    width: calc(100% - 24px);
+    justify-content: space-around;
+    border-radius: 0;
+  }
+  .workspace-dock button {
+    min-width: 0;
+    flex: 1;
+    width: auto;
+    height: 58px;
+  }
+  .workspace-dock button > span {
+    font-size: 21px;
+  }
+  .workspace-dock small {
+    right: 4px;
+  }
+  .world-task-window {
+    top: 82px;
+    bottom: 102px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    border-radius: 0;
+  }
+  .task-window-heading {
+    padding: 14px 18px;
+  }
+  .task-window-body {
+    padding: 16px 18px;
+  }
+  .task-window-footer {
+    padding: 10px 18px;
+  }
+  .embedded-profile .character-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .workspace-alert {
+    width: calc(100% - 32px);
+    top: 158px;
+  }
+}
+@media (max-height: 550px) and (min-width: 601px) {
+  .workspace-header {
+    top: 12px;
+  }
+  .world-task-window {
+    top: 76px;
+    bottom: 98px;
+  }
+  .workspace-dock {
+    bottom: 10px;
+    padding: 5px;
+  }
+  .workspace-dock button {
+    height: 50px;
+  }
+  .workspace-control-hint {
+    bottom: 79px;
+  }
+  .workspace-objective {
+    display: none;
+  }
+}
+/* World-only RPG skin. Shared tokens keep HUD, dialogs and embedded forms alike. */
+.world-workspace {
+  --rpg-ink: #352e26;
+  --rpg-muted: #6a5a40;
+  --rpg-paper: #f1e1b7;
+  --rpg-paper-light: #fff0cb;
+  --rpg-edge: #49382c;
+  --rpg-wood: #74513b;
+  --rpg-gold: #c5a065;
+  --rpg-forest: #355546;
+  --rpg-frame: 0 0 0 2px #b18a54, 0 0 0 4px #49382c, 4px 6px 0 2px #203c3659;
+  color: var(--rpg-ink);
+}
+.world-workspace :is(button, input, select, a) {
+  transition:
+    background-color 100ms,
+    color 100ms;
+}
+.world-workspace :is(button, a):focus-visible {
+  outline: 3px solid #ffe6a0;
+  outline-offset: 4px;
+}
+.world-workspace
+  :is(.task-window-body, .adventure-dialog)
+  :is(button, a):focus-visible {
+  outline-color: var(--rpg-forest);
+}
+.workspace-brand,
+.workspace-online,
+.workspace-profile,
+.workspace-dock,
+.workspace-map-tools {
+  background:
+    repeating-linear-gradient(0deg, #ffffff05 0 2px, transparent 2px 7px),
+    var(--rpg-wood);
+  color: var(--rpg-paper-light);
+  border: 2px solid var(--rpg-edge);
+  box-shadow: var(--rpg-frame);
+}
+.workspace-brand {
+  padding: 9px 16px;
+  gap: 14px;
+}
+.workspace-brand .brand {
+  color: var(--rpg-paper-light);
+  font-size: 21px;
+}
+.workspace-brand .brand-mark {
+  border-radius: 0;
+  background: var(--rpg-forest);
+  border: 2px solid #bfa66b;
+  box-shadow: 2px 2px 0 #382d23;
+  color: var(--rpg-paper-light);
+}
+.workspace-brand .brand-dot {
+  color: #e8c97e;
+}
+.workspace-brand > span {
+  color: #e4c89b;
+  border-color: #a17a51;
+}
+.workspace-profile small {
+  color: #e5cda5;
+}
+.workspace-profile svg {
+  background: #ead6a1;
+  box-shadow: 0 0 0 2px #362f26;
+}
+.workspace-online .live-dot {
+  border-radius: 0;
+  background: #a9c979;
+  box-shadow: 0 0 0 2px #314334;
+}
+.workspace-online .offline {
+  background: #dd9b76;
+}
+.workspace-location {
+  background: #294a40e8;
+  border-left: 4px solid #e1bf79;
+  padding: 10px 14px;
+  text-shadow: 1px 2px 0 #20372c;
+  box-shadow: 3px 3px 0 #203c3659;
+}
+.workspace-location h1 {
+  font-weight: 700;
+  font-size: 22px;
+  margin: 5px 0;
+}
+.workspace-location .tiny-label {
+  font-size: 7px;
+  letter-spacing: 1.4px;
+  color: #d6d6ac;
+}
+.workspace-objective,
+.workspace-chat-preview,
+.workspace-interaction,
+.workspace-alert,
+.world-task-window,
+.world-workspace .adventure-dialog {
+  background:
+    linear-gradient(
+      90deg,
+      #c6a76818,
+      transparent 12%,
+      transparent 88%,
+      #c6a76818
+    ),
+    var(--rpg-paper);
+  border: 2px solid var(--rpg-edge);
+  border-radius: 0;
+  box-shadow: var(--rpg-frame);
+  color: var(--rpg-ink);
+  backdrop-filter: none;
+}
+.workspace-objective {
+  border-top: 6px solid var(--rpg-wood);
+}
+.workspace-objective > span {
+  color: var(--rpg-muted);
+  font-weight: 700;
+}
+.workspace-objective strong {
+  font-weight: 600;
+  font-size: 13px;
+}
+.workspace-objective small {
+  color: #4c6549;
+  font-size: 10px;
+}
+.workspace-objective:hover {
+  background-color: var(--rpg-paper-light);
+}
+.workspace-dock {
+  gap: 6px;
+  padding: 8px;
+}
+.workspace-dock button {
+  background: #ecd6a2;
+  border: 2px solid #3e342a;
+  box-shadow:
+    inset 2px 2px #fff0c2,
+    inset -2px -2px #b39460;
+  color: var(--rpg-ink);
+}
+.workspace-dock strong {
+  font-size: 11px;
+  font-weight: 700;
+}
+.workspace-dock button:hover {
+  background: #ffe7b3;
+  transform: none;
+}
+.workspace-dock button.active,
+.workspace-dock button.active:hover {
+  background: var(--rpg-forest);
+  box-shadow:
+    inset 2px 2px #233f33,
+    inset -2px -2px #6c8254;
+  color: #ffe6a0;
+  border-color: #e5be74;
+}
+.workspace-dock small {
+  top: -5px;
+  right: -3px;
+  padding: 2px 3px;
+  background: #415e43;
+  color: #fff0bc;
+  border: 1px solid #253a2b;
+}
+.workspace-dock button > span {
+  display: block;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  font-size: 0;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 28px;
+  image-rendering: pixelated;
+}
+.workspace-dock button.active > span {
+  filter: drop-shadow(1px 1px 0 #20362d);
+}
+.workspace-map-tools button {
+  color: #ffedbd;
+  border-color: #a57d51;
+}
+.workspace-map-tools button:hover {
+  background: #956746;
+}
+.workspace-chat-preview > span {
+  color: var(--rpg-forest);
+  font-weight: 700;
+}
+.workspace-control-hint {
+  background: #243f35ed;
+  padding: 5px 10px;
+  border: 1px solid #80946b;
+  color: #fff0c2;
+  text-shadow: none;
+  font-size: 10px;
+  letter-spacing: 0.3px;
+}
+.workspace-interaction kbd,
+.task-window-footer kbd {
+  border: 1px solid #20392d;
+  border-radius: 0;
+  background: var(--rpg-forest);
+  color: #fff0c2;
+  box-shadow: 1px 2px 0 #24382e;
+}
+.task-window-heading {
+  background:
+    repeating-linear-gradient(0deg, #ffffff05 0 2px, transparent 2px 7px),
+    var(--rpg-wood);
+  color: var(--rpg-paper-light);
+  border-bottom: 3px solid var(--rpg-edge);
+  padding: 16px 22px;
+}
+.task-window-heading span {
+  color: #e2c393;
+  font-size: 8px;
+}
+.task-window-heading h2 {
+  font-weight: 700;
+  font-size: 20px;
+}
+.task-window-heading button,
+.world-workspace .dialog-close {
+  background: #dfc28d;
+  border: 2px solid #443429;
+  border-radius: 0;
+  color: #443429;
+  box-shadow:
+    inset 1px 1px #fff0c2,
+    2px 2px 0 #49382c;
+}
+.task-window-footer {
+  background: #e2cea0;
+  border-top: 2px solid #bda371;
+  color: #594b35;
+}
+.world-workspace :is(.task-window-body, .chat-messages) {
+  scrollbar-color: #8a704b #e4d3aa;
+  scrollbar-width: thin;
+}
+.world-workspace
+  :is(
+    .workspace-empty,
+    .workspace-demo-note,
+    .chat-notice,
+    .chat-input-note,
+    .chat-empty,
+    .chat-empty small,
+    .chat-message time,
+    .journal-subtitle,
+    .local-progress-note,
+    .quest-list small,
+    .inventory p,
+    .landmark-guide small,
+    .adventure-dialog p
+  ) {
+  color: var(--rpg-muted);
+}
+.world-workspace
+  :is(
+    .roster-filter,
+    .inventory,
+    .workspace-demo-note,
+    .chat-message p,
+    .demo-notice,
+    .character-card,
+    .character-portrait,
+    .guild-icon,
+    .place-icon
+  ) {
+  border-radius: 0;
+  background: #e8d6a8;
+  border-color: #b79a65;
+}
+.world-workspace
+  :is(
+    .roster-filter button,
+    .journal-actions button,
+    .inventory button,
+    .world-place,
+    .guild-item,
+    .dialog-actions .button,
+    .embedded-profile .button
+  ) {
+  border-radius: 0;
+  border: 2px solid #ab8c58;
+  background: #efddb1;
+  color: var(--rpg-ink);
+  box-shadow:
+    inset 1px 1px #fff0cb,
+    inset -1px -1px #c1a473;
+}
+.world-workspace
+  :is(
+    .roster-filter button.selected,
+    .guild-item.active,
+    .character-card.selected,
+    .embedded-profile .button.primary,
+    .dialog-actions .button.primary
+  ) {
+  border-color: #294333;
+  background: var(--rpg-forest);
+  color: #fff0c2;
+  box-shadow:
+    inset 1px 1px #7a8c60,
+    inset -1px -1px #223c30;
+}
+.world-workspace
+  :is(.guild-item.active, .character-card.selected)
+  :is(strong, small) {
+  color: #fff0c2;
+}
+.world-workspace .roster-person {
+  border-bottom: 1px solid #c6b183;
+}
+.world-workspace .roster-person > div > span {
+  color: var(--rpg-muted);
+}
+.world-workspace .roster-person strong {
+  color: var(--rpg-ink);
+}
+.world-workspace .world-place {
+  margin-bottom: 12px;
+}
+.world-workspace
+  :is(.chat-compose, .embedded-profile input, .embedded-profile select) {
+  background: var(--rpg-paper-light);
+  border: 2px solid #a18758;
+  border-radius: 0;
+  color: var(--rpg-ink);
+  box-shadow: inset 2px 2px #d7c295;
+}
+.world-workspace .chat-compose input {
+  border: 0;
+  background: transparent;
+  color: var(--rpg-ink);
+}
+.world-workspace
+  :is(
+    .chat-compose:focus-within,
+    .embedded-profile input:focus,
+    .embedded-profile select:focus
+  ) {
+  border-color: var(--rpg-forest);
+  outline: 2px solid #718251;
+  outline-offset: 1px;
+}
+.world-workspace .chat-compose input::placeholder {
+  color: #796849;
+}
+.world-workspace .chat-compose button {
+  border-radius: 0;
+  background: var(--rpg-forest);
+  color: #fff0c2;
+}
+.world-workspace .chat-message p {
+  border-left: 3px solid #799060;
+  color: var(--rpg-ink);
+}
+.world-workspace .chat-message strong {
+  color: var(--rpg-forest);
+}
+.world-workspace .quest-progress {
+  height: 8px;
+  border: 1px solid #94764c;
+  border-radius: 0;
+  background: #d8c294;
+}
+.world-workspace .quest-progress span {
+  background: #59734b;
+}
+.world-workspace
+  :is(.quest-objective, .adventure-journal h2, .quest-list .done strong) {
+  color: #34513b;
+}
+.world-workspace .quest-list li > span {
+  color: #775b35;
+}
+.world-workspace .inventory {
+  border: 2px solid #b29560;
+  box-shadow: inset 0 0 0 3px #f7e7be;
+}
+.world-workspace .hat-preview {
+  color: #876333;
+}
+.world-workspace .adventure-dialog::backdrop {
+  backdrop-filter: none;
+  background: #152b236b;
+}
+.world-workspace .adventure-dialog h2 {
+  color: var(--rpg-forest);
+}
+.world-workspace .dialog-eyebrow {
+  color: #79603d;
+}
+.world-workspace .dialog-close {
+  width: 30px;
+  height: 30px;
+}
+.world-workspace
+  .embedded-profile
+  :is(.demo-notice, small, label > span, legend > span, .account-details) {
+  color: var(--rpg-muted);
+}
+@media (max-width: 600px) {
+  .workspace-brand {
+    padding: 8px;
+  }
+  .workspace-brand .brand {
+    font-size: 16px;
+  }
+  .workspace-location {
+    padding: 8px 12px;
+  }
+  .workspace-dock {
+    gap: 4px;
+    padding: 6px;
+  }
+  .workspace-dock button > span {
+    width: 24px;
+    height: 24px;
+    background-size: 24px;
+  }
+  .workspace-dock strong {
+    font-size: 10px;
+  }
+  .task-window-heading {
+    padding: 12px 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .world-workspace *,
+  .world-workspace *::before,
+  .world-workspace *::after {
+    transition: none;
+  }
+}
+
+/* Original 16px grid icons; decorative, button labels remain accessible. */
+.workspace-dock button[aria-controls="task-chat"] > span {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%20shape-rendering%3D%22crispEdges%22%3E%3Cpath%20fill%3D%22%233d4936%22%20d%3D%22M2%202h12v10H8l-4%203v-3H2z%22%2F%3E%3Cpath%20fill%3D%22%23f9e5b0%22%20d%3D%22M3%203h10v8H6v2H5v-2H3z%22%2F%3E%3Cpath%20fill%3D%22%23687953%22%20d%3D%22M5%206h1v2H5zm3%200h1v2H8zm3%200h1v2h-1z%22%2F%3E%3C%2Fsvg%3E");
+}
+.workspace-dock button[aria-controls="task-people"] > span {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%20shape-rendering%3D%22crispEdges%22%3E%3Cpath%20fill%3D%22%23344737%22%20d%3D%22M3%202h5v5H3zm6%202h4v4H9zM1%209h9v6H1zm10%201h4v5h-4z%22%2F%3E%3Cpath%20fill%3D%22%23eac289%22%20d%3D%22M4%203h3v3H4zm6%202h2v2h-2z%22%2F%3E%3Cpath%20fill%3D%22%238fa56b%22%20d%3D%22M2%2010h7v4H2zm9%201h3v3h-3z%22%2F%3E%3C%2Fsvg%3E");
+}
+.workspace-dock button[aria-controls="task-quests"] > span {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%20shape-rendering%3D%22crispEdges%22%3E%3Cpath%20fill%3D%22%23614630%22%20d%3D%22M3%201h9v2h2v12H2V3h1z%22%2F%3E%3Cpath%20fill%3D%22%23f4dda0%22%20d%3D%22M4%202h7v2h2v10H3V4h1z%22%2F%3E%3Cpath%20fill%3D%22%23799052%22%20d%3D%22M5%205h6v1H5zm0%203h6v1H5zm0%203h4v1H5z%22%2F%3E%3Cpath%20fill%3D%22%23aa6246%22%20d%3D%22M10%2010h2v5l-1-1-1%201z%22%2F%3E%3C%2Fsvg%3E");
+}
+.workspace-dock button[aria-controls="task-bag"] > span {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%20shape-rendering%3D%22crispEdges%22%3E%3Cpath%20fill%3D%22%234d382a%22%20d%3D%22M5%201h6v3h2v3h1v8H2V7h1V4h2z%22%2F%3E%3Cpath%20fill%3D%22%23c49357%22%20d%3D%22M6%202h4v2H6zM4%205h8v3H4zM3%209h10v5H3z%22%2F%3E%3Cpath%20fill%3D%22%23805937%22%20d%3D%22M5%2010h6v4H5z%22%2F%3E%3Cpath%20fill%3D%22%23f5d28b%22%20d%3D%22M7%207h2v3H7z%22%2F%3E%3C%2Fsvg%3E");
+}
+.workspace-dock button[aria-controls="task-guilds"] > span {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%20shape-rendering%3D%22crispEdges%22%3E%3Cpath%20fill%3D%22%23393c31%22%20d%3D%22M1%202h2v2h2V2h2v4h2V2h2v2h2V2h2v13H1z%22%2F%3E%3Cpath%20fill%3D%22%23b7b29b%22%20d%3D%22M2%206h4v8H2zm5%202h2v6H7zm3-2h4v8h-4z%22%2F%3E%3Cpath%20fill%3D%22%23425e47%22%20d%3D%22M3%207h2v3H3zm8%200h2v3h-2zM7%2011h2v4H7z%22%2F%3E%3C%2Fsvg%3E");
+}
+.workspace-dock button[aria-controls="task-settings"] > span {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%20shape-rendering%3D%22crispEdges%22%3E%3Cpath%20fill%3D%22%23394636%22%20d%3D%22M6%201h4v2h2v2h3v6h-3v2h-2v2H6v-2H4v-2H1V5h3V3h2z%22%2F%3E%3Cpath%20fill%3D%22%23b1b795%22%20d%3D%22M6%203h4v2h2v2h1v2h-1v2h-2v2H6v-2H4V9H3V7h1V5h2z%22%2F%3E%3Cpath%20fill%3D%22%23435f49%22%20d%3D%22M6%206h4v4H6z%22%2F%3E%3C%2Fsvg%3E");
+}

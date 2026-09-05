@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { SessionProvider } from "@/components/session-provider";
 import "./globals.css";
+import "./world-workspace.css";
 export const metadata: Metadata = {
   title: "TeamWorld — 함께 일하는 또 하나의 세계",
   description:

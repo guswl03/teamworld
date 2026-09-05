@@ -4,6 +4,7 @@ import { isPlayer, mergePresence } from "../src/lib/transport";
 import { DEFAULT_TEAMS, WORLD_ID } from "../src/lib/data";
 import { createDemoTransport } from "../src/lib/demo-transport";
 import type { Player } from "../src/lib/types";
+import type { ChatMessage } from "../src/lib/chat";
 const player: Player = {
   id: "user-a",
   session_id: "session-a",
@@ -52,13 +53,25 @@ test("two demo clients join, move, update status and leave", async () => {
   });
   let aPeers: Player[] = [],
     bPeers: Player[] = [];
+  const aChat: ChatMessage[] = [],
+    bChat: ChatMessage[] = [],
+    otherChat: ChatMessage[] = [];
   const a = createDemoTransport(player, {
     players: (p) => (aPeers = p),
     connection: () => {},
+    chat: (message) => aChat.push(message),
   });
   const b = createDemoTransport(
     { ...player, id: "user-b", session_id: "session-b", nickname: "동료" },
-    { players: (p) => (bPeers = p), connection: () => {} },
+    {
+      players: (p) => (bPeers = p),
+      connection: () => {},
+      chat: (message) => bChat.push(message),
+    },
+  );
+  const other = createDemoTransport(
+    { ...player, world_id: "different-world", session_id: "other" },
+    { players: () => {}, connection: () => {}, chat: (m) => otherChat.push(m) },
   );
   async function until(predicate: () => boolean) {
     const end = Date.now() + 2000;
@@ -69,14 +82,25 @@ test("two demo clients join, move, update status and leave", async () => {
   }
   try {
     await until(() => aPeers.length === 1 && bPeers.length === 1);
+    await a.chat("  안녕하세요 <b>친구</b>  ");
+    await until(() => bChat.length === 1);
+    assert.equal(bChat[0].text, "안녕하세요 <b>친구</b>");
+    assert.equal(aChat.length, 1);
+    assert.equal(otherChat.length, 0);
+    await assert.rejects(a.chat("너무 빠른 메시지"));
+    await assert.rejects(b.chat("   "));
+    await b.chat("반가워요!");
+    await until(() => aChat.length === 2);
     a.move({ x: 900, y: 640, direction: "right", moving: true }, "main-square");
     await until(() => bPeers[0].x === 900);
     a.update({ ...player, status: "working" });
     await until(() => bPeers[0].status === "working");
     b.close();
+    await assert.rejects(b.chat("종료 후 전송"));
     await until(() => aPeers.length === 0);
   } finally {
     a.close();
     b.close();
+    other.close();
   }
 });

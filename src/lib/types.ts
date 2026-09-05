@@ -37,11 +37,13 @@ export interface Player extends Profile, Position {
 }
 export type ConnectionState = "connecting" | "connected" | "disconnected";
 export interface Transport {
+  chat(text: string): Promise<void>;
   move(position: Position, room: string): void;
   update(profile: Profile): void;
   close(): void;
 }
 export interface TransportCallbacks {
+  chat?(message: import("./chat").ChatMessage): void;
   players(players: Player[]): void;
   connection(state: ConnectionState): void;
 }
