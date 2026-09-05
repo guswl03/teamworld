@@ -75,14 +75,16 @@ export function AdventurePanel({
   return (
     <section
       className={`adventure-journal ${inventoryOnly ? "inventory-only" : ""}`}
-      aria-label={inventoryOnly ? "배낭" : "모험 수첩"}
+      aria-label={inventoryOnly ? "배낭" : "센터 탐방 수첩"}
     >
       <div className="journal-heading">
         <span>CHAPTER 01</span>
         <span>✦</span>
       </div>
-      <h2>작은 마을의 첫 모험</h2>
-      <p className="journal-subtitle">길을 걷고, 이야기를 발견하세요.</p>
+      <h2>교육센터의 첫 탐방</h2>
+      <p className="journal-subtitle">
+        랩과 로비를 둘러보고 센터를 알아보세요.
+      </p>
       <div className="quest-progress">
         <span style={{ width: `${(completed / 3) * 100}%` }} />
       </div>
@@ -93,10 +95,10 @@ export function AdventurePanel({
         <li className={state.visited.length === 3 ? "done" : ""}>
           <span>01</span>
           <div>
-            <strong>마을의 세 가지 풍경</strong>
+            <strong>센터의 세 안내존</strong>
             <small>
               {state.accepted
-                ? `${state.visited.length}/3 명소 발견`
+                ? `${state.visited.length}/3 안내존 확인`
                 : "루미에게 퀘스트 받기"}
             </small>
           </div>
@@ -104,16 +106,18 @@ export function AdventurePanel({
         <li className={state.treasure ? "done" : ""}>
           <span>02</span>
           <div>
-            <strong>잊혀진 여행자의 보물</strong>
+            <strong>신입 멤버 웰컴 키트</strong>
             <small>
-              {state.treasure ? "보물 획득 완료" : "시장 남쪽에서 상자 찾기"}
+              {state.treasure
+                ? "키트 수령 완료"
+                : "로비 북동쪽에서 보관함 찾기"}
             </small>
           </div>
         </li>
         <li className={state.rewarded ? "done" : ""}>
           <span>03</span>
           <div>
-            <strong>모험의 첫 페이지</strong>
+            <strong>센터 탐방 완료</strong>
             <small>
               {state.rewarded
                 ? "탐험가의 모자 획득"
@@ -123,7 +127,7 @@ export function AdventurePanel({
         </li>
       </ol>
       <div className="journal-actions">
-        <button onClick={onGuide}>⌖ 탐험 안내</button>
+        <button onClick={onGuide}>⌖ 센터 안내</button>
         <button onClick={() => setBag(!bag)} aria-expanded={bag}>
           ♧ 배낭 {state.rewarded ? "1" : "0"}
         </button>
@@ -136,7 +140,7 @@ export function AdventurePanel({
           </strong>
           <p>
             {state.rewarded
-              ? "첫 모험을 마친 당신에게. 내 화면에 표시되는 외형 보상이에요."
+              ? "센터 탐방을 마친 기념품. 내 화면에 표시되는 외형 보상이에요."
               : "루미의 퀘스트를 완료하면 특별한 모자를 받아요."}
           </p>
           {state.rewarded && (
@@ -185,17 +189,17 @@ export function AdventureDialog({
   const description =
     kind === "npc"
       ? !state.accepted
-        ? "어서 와요, 모험가! 바람꽃 정원, 별빛 시장, 달빛 연못을 찾아가 볼래요? 세 풍경을 발견하면 시장 남쪽의 오래된 보물상자가 열릴 거예요."
+        ? "교육센터에 오신 것을 환영해요! 시스템 랩 안내존, AI 보안 랩 안내존, 리셉션 로비를 둘러보세요. 세 곳을 확인하면 로비 북동쪽 보관함에서 웰컴 키트를 받을 수 있어요."
         : state.rewarded
-          ? "마을에 당신의 첫 이야기가 남았어요. 배낭에서 바람깃 모자를 써 보세요. 다음에는 동료들과 함께 걸어볼까요?"
+          ? "센터 탐방을 마쳤어요. 배낭에서 기념 모자를 써 보세요. 멘토 NPC에게 다가가면 커리큘럼 안내도 확인할 수 있어요."
           : state.treasure
-            ? "이 작은 별 조각을 찾았군요! 마을을 돌아본 기념으로 바람깃 탐험가 모자를 드릴게요."
-            : "서두르지 않아도 괜찮아요. 모험 수첩을 따라 세 명소를 둘러보고 보물상자를 찾아보세요."
+            ? "웰컴 키트를 받으셨군요! 센터를 둘러본 기념으로 기존 탐험가 모자를 드릴게요."
+            : "센터 탐방 수첩을 따라 세 안내존을 둘러보고 웰컴 키트를 받아보세요."
       : state.treasure
-        ? "상자는 비어 있어요. 루미에게 돌아가 발견한 보물을 보여주세요."
+        ? "키트를 받았어요. 안내원 루미에게 돌아가 탐방을 보고해 주세요."
         : state.visited.length === 3
-          ? "세 풍경의 기억이 모여 자물쇠가 풀렸어요. 뚜껑 사이로 작은 별빛이 새어 나옵니다."
-          : "상자에 세 가지 문양이 새겨져 있어요. 루미에게 퀘스트를 받고 마을의 세 명소를 먼저 둘러보세요.";
+          ? "세 안내존을 모두 확인했어요. 웰컴 키트를 받을 수 있습니다."
+          : "루미에게 센터 탐방 안내를 받고 세 안내존을 먼저 둘러보세요.";
   return (
     <dialog ref={dialog} className="adventure-dialog" onCancel={onClose}>
       <button className="dialog-close" aria-label="대화 닫기" onClick={onClose}>
@@ -205,12 +209,12 @@ export function AdventureDialog({
         {kind === "guide"
           ? "FIELD NOTES"
           : kind === "npc"
-            ? "VILLAGE GUIDE · NPC"
+            ? "CENTER GUIDE · NPC"
             : "DISCOVERY"}
       </span>
       <h2>
         {kind === "guide"
-          ? "길 위에서 만나는 작은 발견"
+          ? "처음 만나는 교육센터"
           : kind === "npc"
             ? NPC.name
             : CHEST.name}
@@ -218,8 +222,8 @@ export function AdventureDialog({
       {kind === "guide" ? (
         <>
           <p>
-            중앙 광장으로 이동한 뒤 분수 아래의 루미에게 다가가 <kbd>E</kbd>를
-            눌러 주세요. 명소는 가까이 걸어가면 발견됩니다.
+            센터 로비로 이동한 뒤 안내원 루미에게 다가가 <kbd>E</kbd>를 눌러
+            주세요. 안내존은 가까이 걸어가면 확인됩니다.
           </p>
           <ul className="landmark-guide">
             {LANDMARKS.map((p) => (
@@ -233,7 +237,7 @@ export function AdventureDialog({
             ))}
           </ul>
           <p>
-            세 명소를 찾았다면 시장 남쪽 보물상자 앞에서 E → 루미에게 돌아와
+            세 안내존을 확인했다면 로비 북동쪽 보관함 앞에서 E → 루미에게 돌아와
             보고 → 배낭에서 모자 착용!
           </p>
         </>
@@ -252,13 +256,13 @@ export function AdventureDialog({
             {kind === "npc"
               ? state.treasure
                 ? "보상 받기 · 바람깃 모자"
-                : "좋아요, 탐험할게요"
-              : "보물상자 열기"}
+                : "센터 둘러보기 시작"
+              : "웰컴 키트 받기"}
           </button>
         )}
         <button className="button" onClick={onClose}>
           {" "}
-          {kind === "guide" ? "산책하러 가기" : "다음에 또 만나요"}{" "}
+          {kind === "guide" ? "센터 둘러보기" : "안내 닫기"}{" "}
         </button>
       </div>
     </dialog>

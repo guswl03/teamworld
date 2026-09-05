@@ -1,5 +1,6 @@
-import { AVATAR_SHEETS } from "@/game/world-art-model";
+import { IT_ATLAS, IT_FRAMES } from "@/game/it-avatar";
 import type { Avatar as AvatarType } from "@/lib/types";
+import type { CSSProperties } from "react";
 
 export function Avatar({
   type,
@@ -8,17 +9,26 @@ export function Avatar({
   type: AvatarType;
   size?: number;
 }) {
-  const sheet = AVATAR_SHEETS[type];
-  const rows = type === "ranger" ? 7 : type === "explorer" ? 8 : 6;
+  const frame = IT_FRAMES[type][0];
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="52 40 88 112"
+    <span
+      className="avatar-image"
       aria-hidden="true"
-      style={{ imageRendering: "pixelated" }}
+      style={{ "--avatar-size": `${size}px` } as CSSProperties}
     >
-      <image href={sheet.url} width={sheet.columns * 192} height={rows * 192} />
-    </svg>
+      <span
+        style={{
+          display: "block",
+          flexShrink: 0,
+          height: "100%",
+          aspectRatio: `${frame.width} / ${frame.height}`,
+          backgroundImage: `url(${IT_ATLAS.url})`,
+          backgroundRepeat: "no-repeat",
+          backgroundSize: `${(IT_ATLAS.width / frame.width) * 100}% ${(IT_ATLAS.height / frame.height) * 100}%`,
+          backgroundPosition: `${(frame.x / (IT_ATLAS.width - frame.width)) * 100}% ${(frame.y / (IT_ATLAS.height - frame.height)) * 100}%`,
+          imageRendering: "pixelated",
+        }}
+      />
+    </span>
   );
 }

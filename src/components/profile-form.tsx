@@ -137,6 +137,14 @@ export function ProfileForm({
                   </button>
                 ))}
               </div>
+              <div className="it-role-note" aria-live="polite">
+                <strong>{AVATAR_INFO[avatar].name}</strong>
+                <p>{AVATAR_INFO[avatar].role}</p>
+                <small>
+                  역할은 캐릭터 콘셉트예요. 소속 길드와 관계없이 자유롭게
+                  선택하세요.
+                </small>
+              </div>
             </fieldset>
             <div className="form-two-columns">
               <div>

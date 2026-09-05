@@ -1,4 +1,5 @@
 import type { Position, Team } from "../lib/types";
+import { CENTER_OBJECTS, LOBBY } from "./center-model";
 export const WORLD = { width: 1600, height: 1120, speed: 185, radius: 12 };
 export interface Region {
   id: string;
@@ -37,16 +38,13 @@ export function regionsFor(teams: Team[]): Region[] {
     };
   });
 }
-export function obstaclesFor(regions: Region[]): Obstacle[] {
-  return [
-    { x: 765, y: 515, width: 70, height: 55 },
-    ...regions.map((r) => ({
-      x: r.x - 69,
-      y: r.y - 86,
-      width: 138,
-      height: 95,
-    })),
-  ];
+export function obstaclesFor(_regions: Region[]): Obstacle[] {
+  return CENTER_OBJECTS.map(({ x, y, width, height }) => ({
+    x,
+    y,
+    width,
+    height,
+  }));
 }
 export function roomAt(
   position: Pick<Position, "x" | "y">,
@@ -61,12 +59,39 @@ export function roomAt(
 }
 export function spawnFor(teamId: string, regions: Region[]): Position {
   const region = regions.find((r) => r.teamId === teamId);
-  return {
-    x: region?.x || 800,
+  return safeArrival({
+    x: region?.x ?? 800,
     y: region ? region.y + 80 : 640,
+  });
+}
+// Arrival correction is shared by team spawns and scene travel. Search only a
+// bounded neighbourhood; malformed/faraway targets always use the known lobby.
+export function safeArrival(point: Pick<Position, "x" | "y">): Position {
+  const obstacles = obstaclesFor([]);
+  const arrival = (x: number, y: number): Position => ({
+    x,
+    y,
     direction: "down",
     moving: false,
-  };
+  });
+  if (canStand(point.x, point.y, obstacles)) return arrival(point.x, point.y);
+  if (Number.isFinite(point.x) && Number.isFinite(point.y)) {
+    for (let distance = 10; distance <= 120; distance += 10) {
+      for (let offset = -distance; offset <= distance; offset += 10) {
+        for (const [dx, dy] of [
+          [offset, -distance],
+          [offset, distance],
+          [-distance, offset],
+          [distance, offset],
+        ]) {
+          const x = point.x + dx,
+            y = point.y + dy;
+          if (canStand(x, y, obstacles)) return arrival(x, y);
+        }
+      }
+    }
+  }
+  return arrival(LOBBY.x, LOBBY.y);
 }
 export function canStand(x: number, y: number, obstacles: Obstacle[]): boolean {
   const r = WORLD.radius;

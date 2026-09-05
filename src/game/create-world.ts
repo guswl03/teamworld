@@ -3,7 +3,9 @@ import { createWorldInput } from "./world-input";
 import { freshAdventure, type Adventure } from "./adventure-model";
 import { drawWorldDetails } from "./world-details";
 import { preloadWorldArt, drawArtMap } from "./world-art";
-import { avatarFrame } from "./world-art-model";
+import { itFrameName } from "./it-avatar";
+import { MENTORS, mentorApproach } from "./mentors";
+import { LOBBY } from "./center-model";
 import {
   STATUSES,
   type Player,
@@ -11,7 +13,14 @@ import {
   type Profile,
   type Team,
 } from "../lib/types";
-import { WORLD, regionsFor, obstaclesFor, roomAt, step } from "./world-model";
+import {
+  WORLD,
+  regionsFor,
+  obstaclesFor,
+  roomAt,
+  step,
+  safeArrival,
+} from "./world-model";
 
 export interface WorldController {
   adventure(state: Adventure): void;
@@ -98,6 +107,7 @@ export function createWorld(options: Options): WorldController {
         .fillRect(-11, -57, 23, 12);
       hat.fillStyle(0x61795d).fillRect(-11, -48, 23, 4);
       hat.fillStyle(0xfaf1ca).fillTriangle(7, -54, 21, -70, 16, -51);
+      hat.setY(-18);
       mine.container.add(hat);
       this.cameras.main
         .setBounds(0, 0, WORLD.width, WORLD.height)
@@ -106,7 +116,7 @@ export function createWorld(options: Options): WorldController {
       game.canvas.setAttribute("tabindex", "0");
       game.canvas.setAttribute(
         "aria-label",
-        "TeamWorld 월드. WASD 또는 방향키로 바로 이동하고 E로 대화하세요.",
+        "TeamWorld 가상 교육센터. WASD 또는 방향키로 이동하고 E로 안내원과 멘토 NPC의 안내를 확인하세요.",
       );
       game.canvas.addEventListener("pointerdown", () => game.canvas.focus());
       game.canvas.addEventListener("blur", clearKeys);
@@ -126,7 +136,9 @@ export function createWorld(options: Options): WorldController {
       paintActor(mine, { ...profile, ...position }, time, reduced);
       hat
         .setVisible(adventure.equipped)
-        .setY(!reduced && position.moving ? Math.sin(time / 85) * 2 : 0);
+        .setY(
+          -18 + (!reduced && position.moving ? Math.sin(time / 85) * 2 : 0),
+        );
       details.update(adventure);
       mine.container
         .setPosition(position.x, position.y)
@@ -173,7 +185,7 @@ export function createWorld(options: Options): WorldController {
     parent: options.parent,
     width: options.parent.clientWidth,
     height: options.parent.clientHeight,
-    backgroundColor: "#aabc98",
+    backgroundColor: "#132b42",
     pixelArt: true,
     roundPixels: true,
     scene,
@@ -184,7 +196,11 @@ export function createWorld(options: Options): WorldController {
     fps: { target: 60 },
   });
   const observer = new ResizeObserver(() =>
-    game.scale.resize(options.parent.clientWidth, options.parent.clientHeight),
+    // RESIZE derives the canvas size from parentSize, including panel toggles.
+    game.scale.setParentSize(
+      options.parent.clientWidth,
+      options.parent.clientHeight,
+    ),
   );
   observer.observe(options.parent);
   return {
@@ -208,12 +224,13 @@ export function createWorld(options: Options): WorldController {
     travel(room) {
       if (!ready) return;
       const region = regions.find((r) => r.id === room);
-      position = {
-        x: region?.x || 800,
-        y: region ? region.y + 80 : 640,
-        direction: "down",
-        moving: false,
-      };
+      const mentor = MENTORS.find((m) => m.id === room);
+      const destination = mentor
+        ? mentorApproach(mentor)
+        : region
+          ? { x: region.x, y: region.y + 80 }
+          : LOBBY;
+      position = safeArrival(destination);
       clearKeys();
       options.onMove(position, roomAt(position, regions));
       focusWorld();
@@ -246,21 +263,22 @@ function createActor(
     .ellipse(0, 3, 37, 15)
     .setStrokeStyle(2, self ? 0xf7f1d6 : 0xc7dcc5, 0.8);
   const sprite = scene.add
-    .image(0, -24, "art-" + player.avatar_type, 0)
-    .setScale(0.85);
+    .image(0, 3, "it-team", itFrameName(player.avatar_type, false, 0, true))
+    .setOrigin(0.5, 1);
+  sprite.setScale(64 / sprite.height);
   const name = scene.add
     .text(0, -84, player.nickname + (self ? " · 나" : ""), {
       fontFamily: "Arial, sans-serif",
-      fontSize: "12px",
+      fontSize: "16px",
       color: "#f8f5e8",
-      backgroundColor: self ? "#344e40" : "#536354",
+      backgroundColor: self ? "#234c65" : "#4a667a",
       padding: { x: 8, y: 4 },
     })
     .setOrigin(0.5);
   const status = scene.add
-    .text(0, -106, STATUSES[player.status], {
+    .text(0, -116, STATUSES[player.status], {
       fontFamily: "Arial, sans-serif",
-      fontSize: "11px",
+      fontSize: "16px",
       color: "#384c3a",
       backgroundColor: "#f8f4df",
       padding: { x: 6, y: 3 },
@@ -282,14 +300,13 @@ function paintActor(
   time: number,
   reduced: boolean,
 ) {
-  const texture = "art-" + player.avatar_type;
-  if (actor.sprite.texture.key !== texture) actor.sprite.setTexture(texture);
   actor.sprite.setFrame(
-    avatarFrame(player.avatar_type, player.moving, time, reduced),
+    itFrameName(player.avatar_type, player.moving, time, reduced),
   );
+  actor.sprite.setScale(64 / actor.sprite.height);
   actor.name.setText(
     player.nickname + (actor.container.getData("self") ? " · 나" : ""),
   );
   actor.status.setText(STATUSES[player.status]);
-  actor.sprite.setFlipX(player.direction === "left").setY(-24);
+  actor.sprite.setFlipX(player.direction === "left").setY(3);
 }

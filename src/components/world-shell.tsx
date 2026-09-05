@@ -2,9 +2,14 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Brand } from "./brand";
+import { WORLD_TASKS, worldShortcut } from "@/game/world-shortcuts";
+import { AVATAR_INFO } from "@/lib/data";
 import { ProfileForm } from "./profile-form";
 import { WorldTaskWindow } from "./world-task-window";
 import { Avatar } from "./avatar";
+import { MentorDialog } from "./mentor-dialog";
+import { MentorPortrait } from "./mentor-portrait";
+import { MENTORS, mentorAt, type Mentor } from "@/game/mentors";
 import { useSession } from "./session-provider";
 import { GameCanvas, type GameHandle } from "./game-canvas";
 import { WorldChat } from "./world-chat";
@@ -17,7 +22,8 @@ import { NPC, CHEST, near, adventureObjective } from "@/game/adventure-model";
 import { appendChat, type ChatMessage } from "@/lib/chat";
 import { createDemoTransport } from "@/lib/demo-transport";
 import { createSupabaseTransport } from "@/lib/supabase-transport";
-import { regionsFor, roomAt, spawnFor } from "@/game/world-model";
+import { regionsFor } from "@/game/world-model";
+import { LOBBY } from "@/game/center-model";
 import {
   STATUSES,
   type ConnectionState,
@@ -69,19 +75,25 @@ function WorldSession({
   const regions = useMemo(() => regionsFor(teams), [teams]);
   const [initial] = useState<Player>(() => ({
     ...profile,
-    ...spawnFor(profile.team_id, regions),
+    ...LOBBY,
+    direction: "down",
+    moving: false,
     session_id: crypto.randomUUID(),
-    room_id: roomAt(spawnFor(profile.team_id, regions), regions),
+    room_id: "main-square",
   }));
   const [position, setPosition] = useState<Position>(initial);
   const adventure = useAdventure(profile, position);
   const [dialog, setDialog] = useState<"npc" | "chest" | "guide" | null>(null);
+  const [mentor, setMentor] = useState<Mentor | null>(null);
+  const activeModal = !!dialog || !!mentor;
+  const nearbyMentor = mentorAt(position);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   function interact(point: Position) {
-    if (!adventure.loaded || panel || dialog) return;
+    if (!adventure.loaded || panel || activeModal) return;
     setPosition(point);
     if (near(point, NPC)) setDialog("npc");
     else if (near(point, CHEST)) setDialog("chest");
+    else setMentor(mentorAt(point) || null);
   }
   const [room, setRoom] = useState(initial.room_id);
   const transport = useRef<Transport | null>(null);
@@ -138,58 +150,50 @@ function WorldSession({
     (p) => filter === "all" || p.team_id === filter,
   );
   const myTeam = teams.find((t) => t.id === profile.team_id)!;
-  const roomName = regions.find((r) => r.id === room)?.name || "중앙 광장";
+  const roomName = regions.find((r) => r.id === room)?.name || "센터 공용 공간";
   const online = connection === "connected";
   const closePanel = () => setPanel(null);
   useEffect(() => {
-    if (dialog) return;
-    if (panel)
+    if (activeModal) return;
+    if (panel === "chat")
+      document
+        .getElementById("world-chat-input")
+        ?.focus({ preventScroll: true });
+    else if (panel)
       document.getElementById(`task-${panel}`)?.focus({ preventScroll: true });
     else game.current?.focus();
-  }, [panel, dialog]);
+  }, [panel, activeModal]);
   const travel = (id: string) => {
     game.current?.travel(id);
     closePanel();
   };
-  const tasks = [
-    { id: "chat", icon: "◌", label: "채팅" },
-    { id: "people", icon: "♧", label: "동료" },
-    { id: "quests", icon: "✧", label: "퀘스트" },
-    { id: "bag", icon: "♜", label: "배낭" },
-    { id: "guilds", icon: "⌂", label: "길드" },
-    { id: "settings", icon: "⚙", label: "설정" },
-  ] as const;
   return (
     <main
       className="world-workspace"
       onKeyDownCapture={(e) => {
-        if (
-          e.key === "Escape" &&
-          panel &&
-          !dialog &&
-          !e.nativeEvent.isComposing &&
-          e.keyCode !== 229
-        ) {
-          e.preventDefault();
-          e.stopPropagation();
-          closePanel();
-        }
+        const target = e.target instanceof HTMLElement ? e.target : null;
+        const action = worldShortcut(e.code || e.key, {
+          typing: !!target?.closest(
+            "input, textarea, select, [contenteditable]:not([contenteditable=false])",
+          ),
+          interactive: !!target?.closest("button, a, [role=button]"),
+          composing: e.nativeEvent.isComposing || e.keyCode === 229,
+          modified: e.ctrlKey || e.metaKey || e.altKey || e.shiftKey,
+          repeat: e.repeat,
+          modal: activeModal,
+        });
+        if (!action || (action === "close" && !panel)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (action === "close") closePanel();
+        else if (action === "chat") {
+          setPanel("chat");
+          document
+            .getElementById("world-chat-input")
+            ?.focus({ preventScroll: true });
+        } else setPanel((current) => (current === action ? null : action));
       }}
     >
-      <div className="workspace-stage">
-        <GameCanvas
-          ref={game}
-          player={initial}
-          peers={peers}
-          teams={teams}
-          profile={profile}
-          onMove={move}
-          adventure={adventure.state}
-          onInteract={interact}
-          suspended={!!panel || !!dialog}
-        />
-      </div>
-      <div className="workspace-vignette" aria-hidden="true" />
       <header className="workspace-header">
         <div className="workspace-brand">
           <Brand />
@@ -218,32 +222,37 @@ function WorldSession({
             <Avatar type={profile.avatar_type} size={36} />
             <span>
               <strong>{profile.nickname}</strong>
-              <small>{STATUSES[profile.status]}</small>
+              <small>
+                {AVATAR_INFO[profile.avatar_type].name} ·{" "}
+                {STATUSES[profile.status]}
+              </small>
             </span>
             <span>⌄</span>
           </button>
         </div>
       </header>
-      <div className="workspace-location">
-        <span className="tiny-label">YOUR PLACE IN THE WORLD</span>
-        <h1>
-          {roomName}
-          <span>✦</span>
-        </h1>
-        <span data-testid="coordinates">
-          {Math.round(position.x)}, {Math.round(position.y)}
-        </span>
+      <div className="workspace-statusbar">
+        <div className="workspace-location">
+          <span className="tiny-label">YOUR PLACE IN THE WORLD</span>
+          <h1>
+            {roomName}
+            <span>✦</span>
+          </h1>
+          <span data-testid="coordinates">
+            {Math.round(position.x)}, {Math.round(position.y)}
+          </span>
+        </div>
+        <button
+          className="workspace-objective"
+          onClick={() => setPanel("quests")}
+        >
+          <span>
+            CHAPTER 01 <i>↗</i>
+          </span>
+          <strong>{adventureObjective(adventure.state)}</strong>
+          <small>센터 탐방 수첩 펼치기</small>
+        </button>
       </div>
-      <button
-        className="workspace-objective"
-        onClick={() => setPanel("quests")}
-      >
-        <span>
-          CHAPTER 01 <i>↗</i>
-        </span>
-        <strong>{adventureObjective(adventure.state)}</strong>
-        <small>모험 수첩 펼치기</small>
-      </button>
       <div className="workspace-mobile-note">
         <span>✦</span>
         <h2>언제나 같은 세계에서.</h2>
@@ -253,235 +262,292 @@ function WorldSession({
           월드 이동은 PC에서 지원합니다.
         </p>
       </div>
-      {(!online || error) && (
-        <div className="workspace-alert" role="status">
-          {error || "동료들과의 연결을 확인하고 있어요."}
-          <button
-            onClick={() => {
-              setError("");
-              setAttempt((n) => n + 1);
-            }}
-          >
-            다시 연결
-          </button>
-        </div>
-      )}
-      {!panel && !dialog && (near(position, NPC) || near(position, CHEST)) && (
-        <button
-          className="workspace-interaction"
-          onClick={() => interact(position)}
-        >
-          <kbd>E</kbd>
-          {near(position, NPC) ? "루미와 대화하기" : "보물상자 살펴보기"}
-        </button>
-      )}
-      <div className="workspace-map-tools">
-        <button aria-label="지도 확대" onClick={() => game.current?.zoom(0.15)}>
-          +
-        </button>
-        <button
-          aria-label="지도 축소"
-          onClick={() => game.current?.zoom(-0.15)}
-        >
-          −
-        </button>
-        <button
-          aria-label="중앙 광장으로 이동"
-          onClick={() => travel("main-square")}
-        >
-          ⌂
-        </button>
-      </div>
-      {!panel && messages.length > 0 && (
-        <button
-          className="workspace-chat-preview"
-          onClick={() => setPanel("chat")}
-        >
-          <span>◌ {messages[messages.length - 1].nickname}</span>
-          <p>{messages[messages.length - 1].text}</p>
-        </button>
-      )}
-      <div className="workspace-control-hint">
-        {panel || dialog
-          ? "작업 중 · 창을 닫으면 바로 이동할 수 있어요"
-          : "WASD / 방향키 이동 · E 대화"}
-      </div>
-      <nav className="workspace-dock" aria-label="월드 작업 메뉴">
-        {tasks.map((task) => (
-          <button
-            key={task.id}
-            aria-label={task.label}
-            aria-expanded={panel === task.id}
-            aria-controls={`task-${task.id}`}
-            className={panel === task.id ? "active" : ""}
-            onClick={() =>
-              setPanel((current) => (current === task.id ? null : task.id))
-            }
-          >
-            <span aria-hidden="true">{task.icon}</span>
-            <strong>{task.label}</strong>
-            {task.id === "people" && <small>{uniquePlayers.length}</small>}
-          </button>
-        ))}
-      </nav>
-
-      <WorldTaskWindow
-        id="chat"
-        title="모닥불 채팅"
-        active={panel === "chat"}
-        onClose={closePanel}
-      >
-        <WorldChat
-          messages={messages}
-          online={online}
-          active={panel === "chat"}
-          onSend={async (text) => {
-            if (!transport.current)
-              throw new Error("연결을 확인한 뒤 다시 보내 주세요.");
-            await transport.current.chat(text);
-          }}
-        />
-      </WorldTaskWindow>
-      <WorldTaskWindow
-        id="people"
-        title="함께하는 동료"
-        active={panel === "people"}
-        onClose={closePanel}
-      >
-        <div className="roster-filter">
-          <button
-            className={filter === "all" ? "selected" : ""}
-            onClick={() => setFilter("all")}
-          >
-            전체 길드
-          </button>
-          <button
-            className={filter === profile.team_id ? "selected" : ""}
-            onClick={() => setFilter(profile.team_id)}
-          >
-            우리 길드
-          </button>
-        </div>
-        <div className="roster" aria-label="접속 동료 목록">
-          {visiblePlayers.map((p) => (
-            <div className="roster-person" key={p.id}>
-              <div className="roster-avatar">
-                <Avatar type={p.avatar_type} size={42} />
-                <span className={`status-dot status-${p.status}`} />
-              </div>
-              <div>
-                <strong>
-                  {p.nickname}
-                  {p.id === profile.id && <small>나</small>}
-                </strong>
-                <span>
-                  {STATUSES[p.status]} ·{" "}
-                  {regions.find((r) => r.id === p.room_id)?.name || "중앙 광장"}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-        {uniquePlayers.length === 1 && (
-          <p className="workspace-empty">
-            아직은 조용한 마을이에요. 동료가 접속하면 이곳에 나타나요.
-          </p>
-        )}
-        {demo && (
-          <p className="workspace-demo-note">
-            로컬 체험은 같은 브라우저의 탭끼리 연결됩니다.
-            <a href="/" target="_blank" rel="noopener noreferrer">
-              새 탭으로 친구 만들기 ↗
-            </a>
-          </p>
-        )}
-      </WorldTaskWindow>
-      <WorldTaskWindow
-        id="quests"
-        title="모험 수첩"
-        active={panel === "quests"}
-        onClose={closePanel}
-      >
-        <AdventurePanel
-          state={adventure.state}
-          warning={adventure.warning}
-          onEquip={() => adventure.act("equip")}
-          onGuide={() => setDialog("guide")}
-        />
-      </WorldTaskWindow>
-      <WorldTaskWindow
-        id="bag"
-        title="나의 배낭"
-        active={panel === "bag"}
-        onClose={closePanel}
-      >
-        <AdventurePanel
-          inventoryOnly
-          state={adventure.state}
-          warning={adventure.warning}
-          onEquip={() => adventure.act("equip")}
-          onGuide={() => setDialog("guide")}
-        />
-      </WorldTaskWindow>
-      <WorldTaskWindow
-        id="guilds"
-        title="길드와 장소"
-        active={panel === "guilds"}
-        onClose={closePanel}
-      >
-        <p className="workspace-empty">
-          가고 싶은 장소를 고르면 바로 이동해요.
-        </p>
-        <button className="world-place" onClick={() => travel("main-square")}>
-          <span className="place-icon">⌂</span>
-          <span>
-            <strong>중앙 광장</strong>
-            <small>모두가 만나는 곳</small>
-          </span>
-          <span>↗</span>
-        </button>
-        <nav className="guild-list" aria-label="길드 이동">
-          {teams.map((t) => (
+      <div className="workspace-utility">
+        {(!online || error) && (
+          <div className="workspace-alert" role="status">
+            {error || "동료들과의 연결을 확인하고 있어요."}
             <button
-              key={t.id}
-              className={`guild-item ${room === t.room_id ? "active" : ""}`}
-              onClick={() => travel(t.room_id)}
+              onClick={() => {
+                setError("");
+                setAttempt((n) => n + 1);
+              }}
             >
-              <span
-                className="guild-icon"
-                style={{
-                  color: t.theme.color,
-                  background: t.theme.color + "18",
-                }}
-              >
-                {t.theme.icon}
-              </span>
-              <span>
-                <strong>{t.name}</strong>
-                <small>{t.theme.subtitle}</small>
-              </span>
-              <span className="guild-count">
-                {uniquePlayers.filter((p) => p.team_id === t.id).length}
-              </span>
+              다시 연결
+            </button>
+          </div>
+        )}
+        {!panel &&
+          !activeModal &&
+          (near(position, NPC) || near(position, CHEST) || nearbyMentor) && (
+            <button
+              className="workspace-interaction"
+              onClick={() => interact(position)}
+            >
+              <kbd>E</kbd>
+              {near(position, NPC)
+                ? "루미와 대화하기"
+                : near(position, CHEST)
+                  ? "웰컴 키트 살펴보기"
+                  : `${nearbyMentor?.name} 멘토 안내`}
+            </button>
+          )}
+        {!panel && messages.length > 0 && (
+          <button
+            className="workspace-chat-preview"
+            onClick={() => setPanel("chat")}
+          >
+            <span>◌ {messages[messages.length - 1].nickname}</span>
+            <p>{messages[messages.length - 1].text}</p>
+          </button>
+        )}
+        <div className="workspace-control-hint">
+          {panel || activeModal
+            ? "작업 중 · 창을 닫으면 바로 이동할 수 있어요"
+            : "WASD / 방향키 이동 · E 대화 · Enter 채팅"}
+        </div>
+      </div>
+      <footer className="workspace-footer">
+        <nav className="workspace-dock" aria-label="월드 작업 메뉴">
+          {WORLD_TASKS.map((task) => (
+            <button
+              key={task.id}
+              aria-label={task.label}
+              aria-expanded={panel === task.id}
+              aria-controls={`task-${task.id}`}
+              aria-keyshortcuts={task.key}
+              title={`${task.label} · ${task.key}`}
+              className={panel === task.id ? "active" : ""}
+              onClick={() =>
+                setPanel((current) => (current === task.id ? null : task.id))
+              }
+            >
+              <span aria-hidden="true">{task.icon}</span>
+              <strong>{task.label}</strong>
+              <kbd>{task.key}</kbd>
+              {task.id === "people" && <small>{uniquePlayers.length}</small>}
             </button>
           ))}
         </nav>
-        <p className="workspace-empty">내 소속: {myTeam.name}</p>
-      </WorldTaskWindow>
-      <WorldTaskWindow
-        id="settings"
-        title="나의 모험가"
-        active={panel === "settings"}
-        onClose={closePanel}
-      >
-        <ProfileForm
-          settings
-          embedded
-          onSaved={() =>
-            setPanel((current) => (current === "settings" ? null : current))
-          }
-        />
-      </WorldTaskWindow>
+        <div className="workspace-map-tools">
+          <button
+            aria-label="지도 확대"
+            onClick={() => game.current?.zoom(0.15)}
+          >
+            +
+          </button>
+          <button
+            aria-label="지도 축소"
+            onClick={() => game.current?.zoom(-0.15)}
+          >
+            −
+          </button>
+          <button
+            aria-label="센터 로비로 이동"
+            onClick={() => travel("main-square")}
+          >
+            ⌂
+          </button>
+        </div>
+      </footer>
+      <div className="workspace-content" data-panel-open={!!panel}>
+        <div className="workspace-stage">
+          <GameCanvas
+            ref={game}
+            player={initial}
+            peers={peers}
+            teams={teams}
+            profile={profile}
+            onMove={move}
+            adventure={adventure.state}
+            onInteract={interact}
+            suspended={!!panel || activeModal}
+          />
+        </div>
+
+        <WorldTaskWindow
+          id="chat"
+          title="라운지 채팅"
+          active={panel === "chat"}
+          onClose={closePanel}
+        >
+          <WorldChat
+            messages={messages}
+            online={online}
+            active={panel === "chat"}
+            onSend={async (text) => {
+              if (!transport.current)
+                throw new Error("연결을 확인한 뒤 다시 보내 주세요.");
+              await transport.current.chat(text);
+            }}
+          />
+        </WorldTaskWindow>
+        <WorldTaskWindow
+          id="people"
+          title="함께하는 동료"
+          active={panel === "people"}
+          onClose={closePanel}
+        >
+          <div className="roster-filter">
+            <button
+              className={filter === "all" ? "selected" : ""}
+              onClick={() => setFilter("all")}
+            >
+              전체 팀
+            </button>
+            <button
+              className={filter === profile.team_id ? "selected" : ""}
+              onClick={() => setFilter(profile.team_id)}
+            >
+              우리 팀
+            </button>
+          </div>
+          <div className="roster" aria-label="접속 동료 목록">
+            {visiblePlayers.map((p) => (
+              <div className="roster-person" key={p.id}>
+                <div className="roster-avatar">
+                  <Avatar type={p.avatar_type} size={42} />
+                  <span className={`status-dot status-${p.status}`} />
+                </div>
+                <div>
+                  <strong>
+                    {p.nickname}
+                    {p.id === profile.id && <small>나</small>}
+                  </strong>
+                  <span>
+                    {STATUSES[p.status]} ·{" "}
+                    {regions.find((r) => r.id === p.room_id)?.name ||
+                      "센터 공용 공간"}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          {uniquePlayers.length === 1 && (
+            <p className="workspace-empty">
+              아직은 조용한 센터예요. 동료가 접속하면 이곳에 나타나요.
+            </p>
+          )}
+          {demo && (
+            <p className="workspace-demo-note">
+              로컬 체험은 같은 브라우저의 탭끼리 연결됩니다.
+              <a href="/" target="_blank" rel="noopener noreferrer">
+                새 탭으로 친구 만들기 ↗
+              </a>
+            </p>
+          )}
+        </WorldTaskWindow>
+        <WorldTaskWindow
+          id="quests"
+          title="센터 탐방 수첩"
+          active={panel === "quests"}
+          onClose={closePanel}
+        >
+          <AdventurePanel
+            state={adventure.state}
+            warning={adventure.warning}
+            onEquip={() => adventure.act("equip")}
+            onGuide={() => setDialog("guide")}
+          />
+        </WorldTaskWindow>
+        <WorldTaskWindow
+          id="bag"
+          title="나의 배낭"
+          active={panel === "bag"}
+          onClose={closePanel}
+        >
+          <AdventurePanel
+            inventoryOnly
+            state={adventure.state}
+            warning={adventure.warning}
+            onEquip={() => adventure.act("equip")}
+            onGuide={() => setDialog("guide")}
+          />
+        </WorldTaskWindow>
+        <WorldTaskWindow
+          id="guilds"
+          title="팀과 멘토 · 센터 안내"
+          active={panel === "guilds"}
+          onClose={closePanel}
+        >
+          <p className="workspace-empty">
+            가고 싶은 장소를 고르면 바로 이동해요.
+          </p>
+          <button className="world-place" onClick={() => travel("main-square")}>
+            <span className="place-icon">⌂</span>
+            <span>
+              <strong>센터 로비</strong>
+              <small>리셉션과 웰컴 키트 안내</small>
+            </span>
+            <span>↗</span>
+          </button>
+          <nav className="guild-list" aria-label="팀 공간 이동">
+            {teams.map((t) => (
+              <button
+                key={t.id}
+                className={`guild-item ${room === t.room_id ? "active" : ""}`}
+                onClick={() => travel(t.room_id)}
+              >
+                <span
+                  className="guild-icon"
+                  style={{
+                    color: t.theme.color,
+                    background: t.theme.color + "18",
+                  }}
+                >
+                  {t.theme.icon}
+                </span>
+                <span>
+                  <strong>{t.name}</strong>
+                  <small>{t.theme.subtitle}</small>
+                </span>
+                <span className="guild-count">
+                  {uniquePlayers.filter((p) => p.team_id === t.id).length}
+                </span>
+              </button>
+            ))}
+          </nav>
+          <p className="workspace-empty">내 소속: {myTeam.name}</p>
+          <section className="mentor-directory" aria-label="멘토 안내 목록">
+            <h2>멘토 안내 · 12 NPC</h2>
+            <p className="mentor-notice">
+              제공된 커리큘럼을 소개하는 게임 NPC입니다. 위치로 이동한 뒤 E로
+              학습 안내를 확인하세요.
+            </p>
+            {MENTORS.map((m) => (
+              <button
+                className="mentor-card"
+                key={m.id}
+                onClick={() => travel(m.id)}
+              >
+                <MentorPortrait mentor={m} size={64} />
+                <span>
+                  <strong>{m.name}</strong>
+                  <small>{m.topics.map((t) => t.title).join(" · ")}</small>
+                </span>
+                <span aria-hidden="true">↗</span>
+              </button>
+            ))}
+          </section>
+          <p className="workspace-demo-note">
+            공개된 판교 주소에서 영감을 얻은 가상 교육센터입니다. 실제 시설
+            도면이나 공식 BoB 서비스가 아닙니다.
+          </p>
+        </WorldTaskWindow>
+        <WorldTaskWindow
+          id="settings"
+          title="나의 프로필"
+          active={panel === "settings"}
+          onClose={closePanel}
+        >
+          <ProfileForm
+            settings
+            embedded
+            onSaved={() =>
+              setPanel((current) => (current === "settings" ? null : current))
+            }
+          />
+        </WorldTaskWindow>
+      </div>
       {dialog && (
         <AdventureDialog
           kind={dialog}
@@ -490,6 +556,9 @@ function WorldSession({
           onAction={() => adventure.act("interact")}
           onClose={() => setDialog(null)}
         />
+      )}
+      {mentor && (
+        <MentorDialog mentor={mentor} onClose={() => setMentor(null)} />
       )}
     </main>
   );

@@ -45,7 +45,7 @@ export function WorldChat({
     <section className="world-chat" aria-label="월드 전체 채팅">
       <div className="chat-heading">
         <h2>
-          <span>◌</span> 모닥불 채팅
+          <span>◌</span> 라운지 채팅
         </h2>
         <span className="tag">WORLD</span>
       </div>

@@ -6,24 +6,24 @@ export const AVATAR_INFO: Record<
   { name: string; color: string; role: string }
 > = {
   ranger: {
-    name: "숲의 탐험가",
+    name: "코드 개발자",
     color: "#66876b",
-    role: "새로운 길을 발견하는 사람",
+    role: "후드티 · 헤드셋 · 노트북 — 아이디어를 코드로 만드는 동료",
   },
   mage: {
-    name: "별빛 마법사",
+    name: "픽셀 디자이너",
     color: "#9283ba",
-    role: "작은 아이디어를 마법으로",
+    role: "베레모 · 펜 태블릿 — 더 나은 경험을 그리는 동료",
   },
   engineer: {
-    name: "길드 엔지니어",
+    name: "로봇 엔지니어",
     color: "#c48752",
-    role: "함께하는 세계를 만드는 사람",
+    role: "작업 조끼 · 미니 로봇 — 안정적인 시스템을 만드는 동료",
   },
   explorer: {
-    name: "바다의 모험가",
+    name: "프로덕트 기획자",
     color: "#628eaf",
-    role: "가능성 너머로 항해하는 사람",
+    role: "태블릿 · 메모보드 — 팀의 다음 목적지를 찾는 동료",
   },
 };
 export const DEFAULT_TEAMS: Team[] = [

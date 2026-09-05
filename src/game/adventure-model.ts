@@ -1,29 +1,29 @@
-export const NPC = { x: 720, y: 660, name: "마을지기 루미" };
-export const CHEST = { x: 1060, y: 725, name: "오래된 보물상자" };
+export const NPC = { x: 720, y: 900, name: "센터 안내원 루미" };
+export const CHEST = { x: 960, y: 750, name: "웰컴 키트 보관함" };
 export const LANDMARKS = [
   {
     id: "garden",
     x: 500,
     y: 450,
-    name: "바람꽃 정원",
+    name: "시스템 랩 안내존",
     icon: "❀",
-    hint: "숲의 길드 오른쪽, 꽃이 피어난 작은 정원",
+    hint: "센터 서쪽, 시스템 랩 옆 안내존",
   },
   {
     id: "market",
     x: 1050,
     y: 395,
-    name: "별빛 시장",
+    name: "AI 보안 랩 안내존",
     icon: "⚑",
-    hint: "광장 북동쪽, 줄무늬 천막이 있는 시장",
+    hint: "센터 북동쪽, AI 보안 랩 옆 안내존",
   },
   {
     id: "pond",
     x: 780,
     y: 870,
-    name: "달빛 연못",
+    name: "리셉션 로비",
     icon: "≈",
-    hint: "광장 남쪽, 작은 나무다리가 있는 연못",
+    hint: "센터 남쪽, 안내 데스크 앞 로비",
   },
 ] as const;
 type Point = { x: number; y: number };
@@ -102,9 +102,10 @@ export function restoreAdventure(value: unknown): Adventure {
   };
 }
 export function adventureObjective(s: Adventure) {
-  if (!s.accepted) return "광장의 마을지기 루미와 이야기하기";
-  if (s.visited.length < 3) return `마을 명소 둘러보기 · ${s.visited.length}/3`;
-  if (!s.treasure) return "시장 남쪽의 보물상자 열기";
-  if (!s.rewarded) return "루미에게 돌아가 탐험 보고하기";
-  return "첫 모험 완료! 배낭에서 보상 모자를 써 보세요";
+  if (!s.accepted) return "리셉션의 안내원 루미와 이야기하기";
+  if (s.visited.length < 3)
+    return `센터 안내존 둘러보기 · ${s.visited.length}/3`;
+  if (!s.treasure) return "로비 북동쪽의 웰컴 키트 받기";
+  if (!s.rewarded) return "루미에게 돌아가 센터 탐방 보고하기";
+  return "센터 탐방 완료! 배낭에서 보상 모자를 써 보세요";
 }
