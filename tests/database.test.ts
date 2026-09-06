@@ -90,12 +90,15 @@ test("migration enforces profile ownership, allowlist, identity and private worl
     }
     async function ingest(event: ReturnType<typeof githubEvent>) {
       await db.exec("reset role; set role service_role");
-      const result = await db.query(
-        "select public.ingest_github_event($1::jsonb) as result",
-        [JSON.stringify(event)],
-      );
-      await db.exec("reset role");
-      return (result.rows[0] as { result: Record<string, unknown> }).result;
+      try {
+        const result = await db.query(
+          "select public.ingest_github_event($1::jsonb) as result",
+          [JSON.stringify(event)],
+        );
+        return (result.rows[0] as { result: Record<string, unknown> }).result;
+      } finally {
+        await db.exec("reset role");
+      }
     }
     await t.test(
       "migration seeds the connected TeamWorld repository",
@@ -427,6 +430,111 @@ test("migration enforces profile ownership, allowlist, identity and private worl
         await assert.rejects(
           db.query("select * from public.profiles"),
           /permission denied/,
+        );
+      },
+    );
+    await t.test(
+      "connected repository cannot be moved to a supplied world",
+      async () => {
+        const otherWorld = "88888888-8888-4888-8888-888888888888";
+        await db.exec("reset role");
+        await db.exec(
+          `insert into public.worlds(id,name) values ('${otherWorld}','Webhook target')`,
+        );
+        await assert.rejects(
+          ingest({
+            ...githubEvent(
+              "delivery-cross-world",
+              "issue",
+              "completed",
+              "Cross-world write",
+            ),
+            world_id: otherWorld,
+          }),
+          /world does not match connected project/,
+        );
+        assert.deepEqual(
+          (
+            await db.query(
+              "select world_id,github_node_id from public.projects order by id",
+            )
+          ).rows,
+          [{ world_id: world, github_node_id: "R_kgDOUPR4rA" }],
+        );
+        assert.deepEqual(
+          (
+            await db.query(`select
+              (select count(*)::integer from public.projects) as projects,
+              (select count(*)::integer from public.quests) as quests,
+              (select count(*)::integer from public.github_deliveries) as deliveries,
+              (select count(*)::integer from realtime.sent_messages) as messages`)
+          ).rows,
+          [{ projects: 1, quests: 2, deliveries: 4, messages: 4 }],
+        );
+      },
+    );
+    await t.test(
+      "unknown repository is rejected without persistence or broadcast",
+      async () => {
+        const unknown = githubEvent(
+          "delivery-unknown-repo",
+          "issue",
+          "open",
+          "Unknown repository",
+        );
+        await assert.rejects(
+          ingest({
+            ...unknown,
+            repository: {
+              ...unknown.repository,
+              id: 987654321,
+              node_id: "R_unknown",
+              owner: "attacker",
+              name: "unknown",
+            },
+          }),
+          /repository is not connected/,
+        );
+        assert.deepEqual(
+          (
+            await db.query(`select
+              (select count(*)::integer from public.projects) as projects,
+              (select count(*)::integer from public.quests) as quests,
+              (select count(*)::integer from public.github_deliveries) as deliveries,
+              (select count(*)::integer from realtime.sent_messages) as messages`)
+          ).rows,
+          [{ projects: 1, quests: 2, deliveries: 4, messages: 4 }],
+        );
+      },
+    );
+    await t.test(
+      "connected repository rejects a mismatched GitHub node id",
+      async () => {
+        const mismatched = githubEvent(
+          "delivery-node-mismatch",
+          "pull_request",
+          "open",
+          "Wrong repository identity",
+        );
+        await assert.rejects(
+          ingest({
+            ...mismatched,
+            repository: {
+              ...mismatched.repository,
+              node_id: "R_mismatch",
+            },
+          }),
+          /repository node id does not match connected project/,
+        );
+        assert.deepEqual(
+          (
+            await db.query(`select
+              (select count(*)::integer from public.projects) as projects,
+              (select count(*)::integer from public.quests) as quests,
+              (select count(*)::integer from public.github_deliveries) as deliveries,
+              (select count(*)::integer from realtime.sent_messages) as messages`)
+          ).rows,
+          [{ projects: 1, quests: 2, deliveries: 4, messages: 4 }],
         );
       },
     );

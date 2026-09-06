@@ -66,9 +66,11 @@ set search_path = ''
 as $$
 declare
   v_delivery_id text := nullif(btrim(event_payload->>'delivery_id'), '');
-  v_world_id uuid := (event_payload->>'world_id')::uuid;
+  v_supplied_world_id uuid := (event_payload->>'world_id')::uuid;
+  v_world_id uuid;
   v_repo_id bigint := (event_payload#>>'{repository,id}')::bigint;
   v_repo_node_id text := event_payload#>>'{repository,node_id}';
+  v_connected_repo_node_id text;
   v_repo_owner text := event_payload#>>'{repository,owner}';
   v_repo_name text := event_payload#>>'{repository,name}';
   v_installation_id bigint := (event_payload#>>'{repository,installation_id}')::bigint;
@@ -91,6 +93,23 @@ begin
     raise exception 'Unsupported quest status: %', coalesce(v_quest_status, 'null');
   end if;
 
+  -- Projects are connected by administrators; webhook data cannot create or remap them.
+  select p.id,p.world_id,p.github_node_id
+  into v_project_id,v_world_id,v_connected_repo_node_id
+  from public.projects p
+  where p.github_repo_id = v_repo_id
+  for update;
+
+  if v_project_id is null then
+    raise exception 'GitHub repository is not connected';
+  end if;
+  if v_repo_node_id is distinct from v_connected_repo_node_id then
+    raise exception 'GitHub repository node id does not match connected project';
+  end if;
+  if v_supplied_world_id is not null and v_supplied_world_id <> v_world_id then
+    raise exception 'GitHub event world does not match connected project';
+  end if;
+
   if v_delivery_id is not null then
     insert into public.github_deliveries(world_id,delivery_id,event_payload)
     values (v_world_id,v_delivery_id,event_payload)
@@ -102,19 +121,12 @@ begin
     end if;
   end if;
 
-  insert into public.projects(
-    world_id,github_repo_id,github_node_id,github_owner,github_repo,installation_id
-  ) values (
-    v_world_id,v_repo_id,v_repo_node_id,v_repo_owner,v_repo_name,v_installation_id
-  )
-  on conflict (github_repo_id) do update set
-    world_id = excluded.world_id,
-    github_node_id = excluded.github_node_id,
-    github_owner = excluded.github_owner,
-    github_repo = excluded.github_repo,
-    installation_id = excluded.installation_id,
+  update public.projects set
+    github_owner = v_repo_owner,
+    github_repo = v_repo_name,
+    installation_id = coalesce(v_installation_id,installation_id),
     updated_at = now()
-  returning id into v_project_id;
+  where id = v_project_id;
 
   insert into public.quests(
     project_id,kind,github_item_id,github_node_id,github_number,title,status
