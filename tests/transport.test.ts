@@ -56,10 +56,12 @@ test("two demo clients join, move, update status and leave", async () => {
   const aChat: ChatMessage[] = [],
     bChat: ChatMessage[] = [],
     otherChat: ChatMessage[] = [];
+  let demoQuestSnapshots = 0;
   const a = createDemoTransport(player, {
     players: (p) => (aPeers = p),
     connection: () => {},
     chat: (message) => aChat.push(message),
+    quests: () => demoQuestSnapshots++,
   });
   const b = createDemoTransport(
     { ...player, id: "user-b", session_id: "session-b", nickname: "동료" },
@@ -87,6 +89,7 @@ test("two demo clients join, move, update status and leave", async () => {
     assert.equal(bChat[0].text, "안녕하세요 <b>친구</b>");
     assert.equal(aChat.length, 1);
     assert.equal(otherChat.length, 0);
+    assert.equal(demoQuestSnapshots, 0);
     await assert.rejects(a.chat("너무 빠른 메시지"));
     await assert.rejects(b.chat("   "));
     await b.chat("반가워요!");

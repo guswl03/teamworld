@@ -29,8 +29,9 @@ http://127.0.0.1:3100 에서 **월드 먼저 둘러보기**를 누르면 계정 
 - 월드 전체 채팅: 최대 200자, 1초 전송 간격, 최근 100개 메시지
 - Supabase private Presence + 10 Hz Broadcast, 원격 좌표 보간, 연결 오류/재시도
 - GitHub ID 초대 명단, 프로필 RLS, 월드별 데이터 및 Realtime 접근 제한
+- 서명 검증·중복 방지·연결 저장소 확인을 거치는 GitHub 이슈/PR 웹훅 서버 경계
 
-채팅은 접속 중 메모리에만 존재하며 새로고침하면 사라집니다. 탐험 진행과 모자는 월드/프로필별로 이 브라우저에 저장되며 다른 기기나 동료에게 동기화되지 않습니다. NPC는 게임 안내 캐릭터이며 접속 인원에 포함되지 않습니다. NPC 대사는 실제 멘토의 인용 발언이나 실시간 상담이 아닙니다. 양혁재 멘토의 주제는 제공 자료에 없어 미확인으로 표시합니다. GitHub 저장소·업무 Quest 연동, 전투, 음성/영상은 아직 없습니다.
+채팅은 접속 중 메모리에만 존재하며 새로고침하면 사라집니다. 탐험 진행과 모자는 월드/프로필별로 이 브라우저에 저장되며 다른 기기나 동료에게 동기화되지 않습니다. NPC는 게임 안내 캐릭터이며 접속 인원에 포함되지 않습니다. NPC 대사는 실제 멘토의 인용 발언이나 실시간 상담이 아닙니다. 양혁재 멘토의 주제는 제공 자료에 없어 미확인으로 표시합니다. Quest 패널에는 연결된 GitHub 이슈와 풀 리퀘스트의 현재 저장 상태가 표시됩니다. 이벤트 동작 이력은 표시용으로 저장하지 않으므로 이력 표시는 의도적으로 `SAVED STATE`를 사용합니다. 전투와 음성/영상은 아직 없습니다.
 
 작업 창이나 NPC 대화가 열린 동안에는 캐릭터 이동을 멈춥니다. 창을 바꾸거나 닫아도 채팅 초안과 접속 상태는 유지되며, 월드 안에서 프로필을 저장해도 현재 위치는 바뀌지 않습니다. 모바일에서는 월드 이동 없이 같은 하단 메뉴로 채팅과 프로필 등 작업을 이용합니다.
 
@@ -55,7 +56,7 @@ Enter: 채팅 열기/전송 · P: 동료 · Q: 퀘스트 · I: 배낭 · G: 장�
 3. Supabase Authentication → Providers → GitHub에 Client ID와 Client Secret을 등록합니다. 앱 코드/브라우저에 GitHub Secret을 넣지 않습니다.
 4. Supabase Authentication → URL Configuration에서 Site URL을 배포 주소로 설정하고 Redirect URLs에 `http://127.0.0.1:3100/auth/callback`, 배포 주소의 `/auth/callback`을 등록합니다. 개발 시 브라우저 주소와 허용 주소의 호스트/포트가 일치해야 합니다.
 5. Supabase Realtime 설정의 **Allow public access**를 끕니다. 앱은 `world:<uuid>` private 채널만 사용합니다. 로그인 세션과 allowlist가 없는 사용자는 입장할 수 없습니다.
-6. `.env.example`을 `.env.local`로 복사한 뒤 프로젝트 URL과 브라우저용 publishable/anon 키를 넣습니다. `NEXT_PUBLIC_WORLD_ID`는 기본값을 사용합니다. 환경 변수 변경 후 개발 서버를 다시 시작합니다. 서비스 역할 키는 사용하지 않습니다.
+6. `.env.example`을 `.env.local`로 복사한 뒤 프로젝트 URL과 브라우저용 publishable/anon 키를 넣습니다. `NEXT_PUBLIC_WORLD_ID`는 기본값을 사용합니다. 환경 변수 변경 후 개발 서버를 다시 시작합니다. 아래 웹훅 연동을 사용하지 않는 로컬 클라이언트 실행에는 서버 비밀값이 필요하지 않습니다.
 7. 관리자가 GitHub 숫자 ID를 확인하고 다음 SQL로 팀원을 초대합니다. 숫자 ID는 GitHub 사용자 API(`https://api.github.com/users/<username>`)의 `id` 필드입니다. 닉네임/사용자명 문자열을 넣지 않습니다.
 
 ```sql
@@ -64,6 +65,25 @@ values ('11111111-1111-4111-8111-111111111111', '실제_GitHub_숫자_ID');
 ```
 
 월드/길드 이름은 관리자가 DB에서 바꿀 수 있습니다. 5개 팀을 초과해 추가해도 DB 구조는 유지되며, 추가 팀의 위치는 안전한 센터 보조 위치를 사용합니다. 6개 이상 팀에 대한 맵 디자인은 별도 조정이 권장됩니다.
+
+## GitHub App 웹훅 설정
+
+먼저 `supabase/migrations/002_github_rpg.sql`을 적용하고 관리자가 `public.projects`에 연결할 저장소의 숫자 ID, GraphQL node ID, 소유자, 저장소명, 대상 `world_id`를 등록합니다. 웹훅은 GitHub가 보낸 월드 ID를 신뢰하지 않고 이 연결 정보로 월드를 다시 결정합니다.
+
+배포 환경의 **서버 전용** 환경 변수에 다음 값을 설정합니다.
+
+- `GITHUB_WEBHOOK_SECRET`: GitHub App의 Webhook secret과 정확히 같은 충분히 긴 임의 문자열
+- `NEXT_PUBLIC_SUPABASE_URL`: Supabase 프로젝트 URL
+- `SUPABASE_SECRET_KEY`: 권장하는 서버 전용 Supabase secret key
+- `SUPABASE_SERVICE_ROLE_KEY`: `SUPABASE_SECRET_KEY`가 없을 때만 사용하는 레거시 fallback
+
+`SUPABASE_SECRET_KEY`와 `SUPABASE_SERVICE_ROLE_KEY`를 모두 설정하면 전자를 사용합니다. 이 키들과 웹훅 secret은 브라우저 코드, 로그, Git 기록에 넣지 마세요. `.env.example`에는 변수 이름만 있으며 실제 값은 배포 플랫폼의 비밀 저장소나 git에서 제외된 `.env.local`에 둡니다.
+
+GitHub의 Developer settings에서 GitHub App을 만들 때 Webhook을 활성화하고 URL을 `https://<배포-도메인>/api/github/webhook`, Content type을 `application/json`으로 설정한 뒤 같은 Webhook secret을 입력합니다. Repository permissions는 **Metadata: Read-only**(GitHub 기본 필수), **Issues: Read-only**, **Pull requests: Read-only**만 부여하고 Subscribe to events에서 **Issues**와 **Pull request**를 선택합니다. 앱은 필요한 저장소에만 설치하세요. 설치 시 전송되는 `ping`은 저장 없이 연결 확인 응답을 받습니다.
+
+현재 서버는 서명된 `issues`와 `pull_request` 이벤트를 받아 Quest로 저장하는 역할만 합니다. GitHub App JWT 발급, installation access token 발급, 외부 앱 등록·설치는 이 저장소에서 자동화하지 않습니다.
+
+GitHub의 `updated_at`은 시간대가 있는 유효한 날짜인지 검증한 뒤 UTC ISO 형식으로 정규화하여 `quests.github_updated_at`에 저장합니다. 지원 범위는 UTC 기준 0001–9999년이며 소수 초는 최대 세 자리입니다. 더 오래된 이벤트는 퀘스트의 최신 상태를 덮어쓰지 않습니다. 고유한 과거 배달도 기록하고 새로고침 신호를 보낼 수 있지만, Quest 패널은 항상 DB를 다시 읽어 현재 저장 상태를 표시합니다. 화면의 정렬에는 DB 반영 시각인 `quests.updated_at`을 사용합니다.
 
 ## 검증
 
