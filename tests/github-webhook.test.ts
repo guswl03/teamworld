@@ -291,6 +291,67 @@ test("pull request open and close events normalize with a nullable installation"
   assert.equal(ingested[0]?.repository.installation_id, null);
 });
 
+test("closed issue and pull request actions force completed despite an open payload state", async () => {
+  const ingested: NormalizedGitHubEvent[] = [];
+  const dependencies = {
+    ingest: async (event: NormalizedGitHubEvent) => {
+      ingested.push(event);
+      return { duplicate: false };
+    },
+  };
+
+  const issueBody = JSON.stringify(githubPayload("issue", "closed", "open"));
+  const pullRequestBody = JSON.stringify(
+    githubPayload("pull_request", "closed", "open"),
+  );
+  await processGitHubWebhook(webhookInput(issueBody), dependencies);
+  await processGitHubWebhook(
+    webhookInput(pullRequestBody, { eventName: "pull_request" }),
+    dependencies,
+  );
+
+  assert.deepEqual(
+    ingested.map(({ event, quest }) => ({ event, status: quest.status })),
+    [
+      { event: "issues", status: "completed" },
+      { event: "pull_request", status: "completed" },
+    ],
+  );
+});
+
+test("quest number accepts the PostgreSQL integer maximum and rejects the next value", async () => {
+  const accepted = githubPayload("issue", "opened", "open");
+  accepted.issue.number = 2147483647;
+  const rejected = githubPayload("issue", "opened", "open");
+  rejected.issue.number = 2147483648;
+  const ingested: NormalizedGitHubEvent[] = [];
+  const dependencies = {
+    ingest: async (event: NormalizedGitHubEvent) => {
+      ingested.push(event);
+      return { duplicate: false };
+    },
+  };
+
+  assert.deepEqual(
+    await processGitHubWebhook(
+      webhookInput(JSON.stringify(accepted)),
+      dependencies,
+    ),
+    { status: 200, body: { status: "processed" } },
+  );
+  assert.deepEqual(
+    await processGitHubWebhook(
+      webhookInput(JSON.stringify(rejected)),
+      dependencies,
+    ),
+    { status: 400, body: { status: "invalid_payload" } },
+  );
+  assert.deepEqual(
+    ingested.map(({ quest }) => quest.number),
+    [2147483647],
+  );
+});
+
 test("supported payloads reject unsafe IDs, empty strings, and oversized titles", async () => {
   const invalidPayloads: unknown[] = [];
   const addInvalid = (
@@ -313,6 +374,9 @@ test("supported payloads reject unsafe IDs, empty strings, and oversized titles"
   addInvalid((payload) => (payload.issue.node_id = ""));
   addInvalid((payload) => (payload.issue.title = "   "));
   addInvalid((payload) => (payload.issue.title = "x".repeat(257)));
+  addInvalid(
+    (payload) => ((payload.issue as { state: string }).state = "unknown"),
+  );
 
   let ingestCalls = 0;
   for (const payload of invalidPayloads) {

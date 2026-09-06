@@ -101,8 +101,15 @@ function text(value: unknown, maximum = Number.POSITIVE_INFINITY): string {
   return normalized;
 }
 
-function positiveSafeInteger(value: unknown): number {
-  if (!Number.isSafeInteger(value) || (value as number) <= 0)
+function positiveSafeInteger(
+  value: unknown,
+  maximum = Number.MAX_SAFE_INTEGER,
+): number {
+  if (
+    !Number.isSafeInteger(value) ||
+    (value as number) <= 0 ||
+    (value as number) > maximum
+  )
     throw new TypeError("Expected a positive safe integer");
   return value as number;
 }
@@ -122,6 +129,8 @@ function normalizePayload(
       ? null
       : record(payload.installation);
   const state = text(quest.state);
+  if (state !== "open" && state !== "closed")
+    throw new TypeError("Invalid quest state");
 
   return {
     delivery_id: deliveryId,
@@ -140,9 +149,9 @@ function normalizePayload(
       kind: questKey,
       id: positiveSafeInteger(quest.id),
       node_id: text(quest.node_id),
-      number: positiveSafeInteger(quest.number),
+      number: positiveSafeInteger(quest.number, 2147483647),
       title: text(quest.title, 256),
-      status: state === "closed" ? "completed" : "open",
+      status: action === "closed" || state === "closed" ? "completed" : "open",
     },
   };
 }
