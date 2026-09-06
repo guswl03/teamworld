@@ -44,6 +44,7 @@ export interface Transport {
 }
 export interface TransportCallbacks {
   chat?(message: import("./chat").ChatMessage): void;
+  quests?(quests: import("./github-quests").GitHubQuest[]): void;
   players(players: Player[]): void;
   connection(state: ConnectionState): void;
 }

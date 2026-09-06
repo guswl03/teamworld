@@ -2,15 +2,24 @@ import type { Player, Transport, TransportCallbacks } from "./types";
 import { getSupabase } from "./supabase";
 import { isPlayer, mergePresence } from "./transport";
 import { createChatGate, normalizeChat } from "./chat";
+import {
+  loadPersistedGitHubQuests,
+  mergeGitHubQuests,
+  validateGitHubQuestEvent,
+  type GitHubQuest,
+  type GitHubQuestLoaderClient,
+} from "./github-quests";
 export function createSupabaseTransport(
   initial: Player,
   callbacks: TransportCallbacks,
+  clientOverride?: ReturnType<typeof getSupabase>,
 ): Transport {
-  const client = getSupabase();
+  const client = clientOverride ?? getSupabase();
   let self = { ...initial };
   let peers: Player[] = [];
   let ready = false;
   let closed = false;
+  let quests: GitHubQuest[] = [];
   const chatGate = createChatGate();
   const channel = client.channel(`world:${self.world_id}`, {
     config: {
@@ -31,6 +40,19 @@ export function createSupabaseTransport(
       if (closed || !ready) return;
       const message = chatGate.receive(payload, self.world_id, peers);
       if (message) callbacks.chat?.(message);
+    })
+    .on("broadcast", { event: "quest_event" }, ({ payload }) => {
+      if (closed || !ready) return;
+      const quest = validateGitHubQuestEvent(payload, self.world_id);
+      if (!quest) return;
+      const next = mergeGitHubQuests(quests, [quest]);
+      if (
+        next.length === quests.length &&
+        next.every((item, index) => item === quests[index])
+      )
+        return;
+      quests = next;
+      callbacks.quests?.(quests);
     })
     .on("presence", { event: "sync" }, () => {
       peers = mergePresence(
@@ -80,8 +102,17 @@ export function createSupabaseTransport(
               ? "disconnected"
               : "connecting",
         );
-        if (ready) track();
-        else {
+        if (ready) {
+          track();
+          void loadPersistedGitHubQuests(
+            client as unknown as GitHubQuestLoaderClient,
+            self.world_id,
+          ).then((persisted) => {
+            if (closed || !ready) return;
+            quests = mergeGitHubQuests(quests, persisted);
+            callbacks.quests?.(quests);
+          });
+        } else {
           peers = [];
           publish();
         }

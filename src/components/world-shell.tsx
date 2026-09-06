@@ -13,6 +13,7 @@ import { MENTORS, mentorAt, type Mentor } from "@/game/mentors";
 import { useSession } from "./session-provider";
 import { GameCanvas, type GameHandle } from "./game-canvas";
 import { WorldChat } from "./world-chat";
+import { GitHubQuestFeed } from "./github-quest-feed";
 import {
   AdventurePanel,
   AdventureDialog,
@@ -20,6 +21,7 @@ import {
 } from "./adventure-panel";
 import { NPC, CHEST, near, adventureObjective } from "@/game/adventure-model";
 import { appendChat, type ChatMessage } from "@/lib/chat";
+import type { GitHubQuest } from "@/lib/github-quests";
 import { createDemoTransport } from "@/lib/demo-transport";
 import { createSupabaseTransport } from "@/lib/supabase-transport";
 import { regionsFor } from "@/game/world-model";
@@ -88,6 +90,7 @@ function WorldSession({
   const activeModal = !!dialog || !!mentor;
   const nearbyMentor = mentorAt(position);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [githubQuests, setGitHubQuests] = useState<GitHubQuest[]>([]);
   function interact(point: Position) {
     if (!adventure.loaded || panel || activeModal) return;
     setPosition(point);
@@ -107,6 +110,7 @@ function WorldSession({
   current.current = { ...initial, ...profile, ...position, room_id: room };
   useEffect(() => {
     setPeers([]);
+    setGitHubQuests([]);
     let live = true;
     const callbacks = {
       chat: (message: ChatMessage) => {
@@ -114,6 +118,9 @@ function WorldSession({
       },
       players: (players: Player[]) => {
         if (live) setPeers(players);
+      },
+      quests: (quests: GitHubQuest[]) => {
+        if (live) setGitHubQuests(quests);
       },
       connection: (state: ConnectionState) => {
         if (live) setConnection(state);
@@ -448,6 +455,7 @@ function WorldSession({
             onEquip={() => adventure.act("equip")}
             onGuide={() => setDialog("guide")}
           />
+          <GitHubQuestFeed quests={githubQuests} />
         </WorldTaskWindow>
         <WorldTaskWindow
           id="bag"

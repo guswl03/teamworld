@@ -1943,6 +1943,150 @@
   }
 }
 
+.github-quest-feed {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 3px double var(--rpg-edge);
+}
+.github-quest-heading,
+.github-quest-repository,
+.github-quest-title,
+.github-quest-meta {
+  display: flex;
+  align-items: center;
+}
+.github-quest-heading {
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.github-quest-heading span,
+.github-quest-heading small {
+  color: var(--rpg-muted);
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.world-workspace .github-quest-heading h2 {
+  margin: 3px 0 0;
+  font-size: 19px;
+  letter-spacing: 0.5px;
+}
+.github-quest-announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.github-quest-empty {
+  margin: 0;
+  padding: 18px;
+  border: 2px dashed #6f9ba5;
+  background: #d8e8eb;
+  color: var(--rpg-muted);
+}
+.github-quest-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.github-quest-list li {
+  padding: 13px 14px;
+  border: 2px solid var(--rpg-edge);
+  background: #dcebee;
+  box-shadow: inset 3px 0 #6f9ba5;
+}
+.github-quest-list li.completed {
+  background: #cadde1;
+  box-shadow: inset 3px 0 #557985;
+}
+.github-quest-repository {
+  gap: 6px;
+  color: var(--rpg-muted);
+}
+.github-quest-repository > span {
+  color: #557985;
+}
+.github-quest-repository strong {
+  font-family: monospace;
+  font-size: 14px;
+}
+.github-quest-repository small {
+  margin-left: auto;
+}
+.github-quest-title {
+  align-items: baseline;
+  gap: 7px;
+  margin: 9px 0;
+}
+.github-quest-title > span {
+  flex: none;
+  padding: 1px 5px;
+  border: 1px solid #668f99;
+  background: #c1d9de;
+  color: var(--rpg-muted);
+  font: 700 12px/1.5 monospace;
+}
+.github-quest-title strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.github-quest-meta {
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--rpg-muted);
+}
+.github-quest-state {
+  padding-left: 13px;
+  font: 700 12px monospace;
+  position: relative;
+}
+.github-quest-state::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  transform: translateY(-50%);
+  background: #2f7d73;
+  box-shadow: 1px 1px 0 var(--rpg-edge);
+}
+.github-quest-state.completed::before {
+  background: #587883;
+}
+.github-quest-meta small {
+  text-align: right;
+  font-family: monospace;
+}
+
+@media (max-width: 600px) {
+  .github-quest-heading {
+    align-items: flex-end;
+  }
+  .github-quest-title {
+    flex-wrap: wrap;
+  }
+  .github-quest-title strong {
+    flex-basis: 100%;
+  }
+  .github-quest-meta {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .github-quest-meta small {
+    text-align: left;
+  }
+}
+
 .mentor-portrait {
   object-fit: contain;
   image-rendering: pixelated;
