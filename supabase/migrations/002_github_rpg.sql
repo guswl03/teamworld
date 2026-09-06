@@ -22,6 +22,7 @@ create table public.quests (
   github_number integer not null check (github_number > 0),
   title text not null check (char_length(btrim(title)) between 1 and 256),
   status text not null check (status in ('open','completed')),
+  github_updated_at timestamptz not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (project_id, kind, github_item_id),
@@ -45,6 +46,9 @@ alter table public.quests enable row level security;
 alter table public.github_deliveries enable row level security;
 revoke all on public.projects, public.quests, public.github_deliveries from anon, authenticated;
 grant select on public.projects, public.quests, public.github_deliveries to authenticated;
+-- The server resolves repository/world membership before calling the definer RPC.
+-- BYPASSRLS does not itself confer table privileges.
+grant select on public.projects to service_role;
 
 create policy projects_read on public.projects for select to authenticated
   using (public.has_world_access(world_id));
@@ -80,6 +84,7 @@ declare
   v_quest_number integer := (event_payload#>>'{quest,number}')::integer;
   v_quest_title text := event_payload#>>'{quest,title}';
   v_quest_status text := event_payload#>>'{quest,status}';
+  v_github_updated_at timestamptz := (event_payload->>'occurred_at')::timestamptz;
   v_delivery_record_id uuid;
   v_project_id uuid;
 begin
@@ -129,17 +134,20 @@ begin
   where id = v_project_id;
 
   insert into public.quests(
-    project_id,kind,github_item_id,github_node_id,github_number,title,status
+    project_id,kind,github_item_id,github_node_id,github_number,title,status,github_updated_at
   ) values (
-    v_project_id,v_quest_kind,v_quest_id,v_quest_node_id,v_quest_number,btrim(v_quest_title),v_quest_status
+    v_project_id,v_quest_kind,v_quest_id,v_quest_node_id,v_quest_number,btrim(v_quest_title),v_quest_status,v_github_updated_at
   )
   on conflict (project_id,kind,github_item_id) do update set
     github_node_id = excluded.github_node_id,
     github_number = excluded.github_number,
     title = excluded.title,
     status = excluded.status,
-    updated_at = now();
+    github_updated_at = excluded.github_updated_at,
+    updated_at = now()
+  where excluded.github_updated_at >= public.quests.github_updated_at;
 
+  -- A stale unique delivery still invalidates the client's authoritative DB snapshot.
   perform realtime.send(
     event_payload,
     'quest_event',

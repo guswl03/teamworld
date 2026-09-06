@@ -114,6 +114,29 @@ function positiveSafeInteger(
   return value as number;
 }
 
+function instant(value: unknown): string {
+  // Explicit timezone, millisecond precision, and years 0001–9999 keep the
+  // normalized instant inside both JavaScript and PostgreSQL date ranges.
+  const normalized = text(value, 29);
+  const match =
+    /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.exec(
+      normalized,
+    );
+  if (!match || normalized.startsWith("0000"))
+    throw new TypeError("Invalid update instant");
+  const calendar = new Date(`${match[1]}Z`);
+  const date = new Date(normalized);
+  if (
+    !Number.isFinite(calendar.getTime()) ||
+    calendar.toISOString().slice(0, 19) !== match[1] ||
+    !Number.isFinite(date.getTime()) ||
+    date.getUTCFullYear() < 1 ||
+    date.getUTCFullYear() > 9999
+  )
+    throw new TypeError("Invalid update instant");
+  return date.toISOString();
+}
+
 function normalizePayload(
   payload: Record<string, unknown>,
   deliveryId: string,
@@ -136,7 +159,7 @@ function normalizePayload(
     delivery_id: deliveryId,
     event: eventName,
     action,
-    occurred_at: text(quest.updated_at),
+    occurred_at: instant(quest.updated_at),
     repository: {
       id: positiveSafeInteger(repository.id),
       node_id: text(repository.node_id),

@@ -219,7 +219,7 @@ test("issue open and close events normalize repository, installation, and status
       delivery_id: "delivery-123",
       event: "issues",
       action: "opened",
-      occurred_at: "2026-09-06T03:04:05Z",
+      occurred_at: "2026-09-06T03:04:05.000Z",
       repository: {
         id: 1358198956,
         node_id: "R_kgDOUPR4rA",
@@ -240,7 +240,7 @@ test("issue open and close events normalize repository, installation, and status
       delivery_id: "delivery-123",
       event: "issues",
       action: "closed",
-      occurred_at: "2026-09-06T03:04:05Z",
+      occurred_at: "2026-09-06T03:04:05.000Z",
       repository: {
         id: 1358198956,
         node_id: "R_kgDOUPR4rA",
@@ -393,6 +393,81 @@ test("supported payloads reject unsafe IDs, empty strings, and oversized titles"
     });
   }
   assert.equal(ingestCalls, 0);
+});
+
+test("GitHub update instants normalize timezone and supported date boundaries", async () => {
+  for (const kind of ["issue", "pull_request"] as const) {
+    for (const [updatedAt, expected] of [
+      ["2026-09-06T12:04:05+09:00", "2026-09-06T03:04:05.000Z"],
+      ["2024-02-29T23:59:59.12Z", "2024-02-29T23:59:59.120Z"],
+      ["0001-01-01T00:00:00Z", "0001-01-01T00:00:00.000Z"],
+      ["9999-12-31T23:59:59.999Z", "9999-12-31T23:59:59.999Z"],
+    ]) {
+      const payload = githubPayload(kind, "opened", "open");
+      payload[kind].updated_at = updatedAt;
+      let occurredAt: string | undefined;
+      const result = await processGitHubWebhook(
+        webhookInput(JSON.stringify(payload), {
+          eventName: kind === "issue" ? "issues" : "pull_request",
+        }),
+        {
+          ingest: async (event) => {
+            occurredAt = event.occurred_at;
+            return { duplicate: false };
+          },
+        },
+      );
+      assert.equal(result.status, 200, updatedAt);
+      assert.equal(occurredAt, expected);
+    }
+  }
+});
+
+test("invalid or unbounded GitHub update dates return 400 before ingestion", async (t) => {
+  for (const updatedAt of [
+    null,
+    123,
+    "",
+    "not-a-date",
+    "infinity",
+    "2026-02-30T00:00:00Z",
+    "2026-02-29T00:00:00Z",
+    "2026-13-01T00:00:00Z",
+    "2026-09-06T24:00:00Z",
+    "2026-09-06T00:00:60Z",
+    "2026-09-06",
+    "2026-09-06T03:04:05",
+    "0000-01-01T00:00:00Z",
+    "+010000-01-01T00:00:00Z",
+    "0001-01-01T00:00:00+01:00",
+    "9999-12-31T23:59:59-01:00",
+    "2026-09-06T00:00:00+24:00",
+    `2026-09-06T00:00:00.${"1".repeat(1000)}Z`,
+  ]) {
+    await t.test(String(updatedAt).slice(0, 70), async () => {
+      for (const kind of ["issue", "pull_request"] as const) {
+        const payload = githubPayload(kind, "opened", "open");
+        (payload[kind] as { updated_at: unknown }).updated_at = updatedAt;
+        let ingestCalls = 0;
+        const result = await processGitHubWebhook(
+          webhookInput(JSON.stringify(payload), {
+            eventName: kind === "issue" ? "issues" : "pull_request",
+          }),
+          {
+            ingest: async () => {
+              ingestCalls += 1;
+              return { duplicate: false };
+            },
+          },
+        );
+        assert.deepEqual(result, {
+          status: 400,
+          body: { status: "invalid_payload" },
+        });
+        assert.equal(ingestCalls, 0);
+      }
+    });
+  }
 });
 
 test("duplicate and ingestion failure responses are stable and generic", async () => {

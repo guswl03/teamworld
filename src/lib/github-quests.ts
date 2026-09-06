@@ -229,6 +229,8 @@ function mapQuestRow(
   const number = positiveSafeInteger(row.github_number, POSTGRES_INTEGER_MAX);
   const title = text(row.title, 256);
   const status = text(row.status);
+  // Snapshot ordering uses DB ingestion time. github_updated_at separately
+  // prevents older GitHub domain events from overwriting the persisted row.
   const occurredAt = instant(row.updated_at);
   if (
     !repository ||

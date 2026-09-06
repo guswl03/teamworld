@@ -1,7 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { createHmac } from "node:crypto";
 import { PGlite } from "@electric-sql/pglite";
+import { processGitHubWebhook } from "../src/lib/github-webhook";
 const world = "11111111-1111-4111-8111-111111111111",
   team = "22222222-2222-4222-8222-000000000001";
 const alice = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
@@ -11,7 +13,7 @@ test("migration enforces profile ownership, allowlist, identity and private worl
   const db = new PGlite();
   try {
     // Minimal Supabase-owned schema fixtures. The application migration is executed unchanged.
-    await db.exec(`create role anon; create role authenticated; create role service_role;
+    await db.exec(`create role anon; create role authenticated; create role service_role bypassrls;
       create schema auth; create schema realtime;
       create table auth.users(id uuid primary key);
       create table auth.identities(user_id uuid, provider text, provider_id text, identity_data jsonb);
@@ -70,13 +72,14 @@ test("migration enforces profile ownership, allowlist, identity and private worl
     ) {
       return {
         delivery_id: deliveryId,
+        occurred_at: "2026-09-06T03:04:05.000Z",
         world_id: world,
         repository: {
           id: 1358198956,
           node_id: "R_kgDOUPR4rA",
           owner: "guswl03",
           name: "teamworld",
-          installation_id: null,
+          installation_id: null as number | null,
         },
         quest: {
           kind,
@@ -116,6 +119,33 @@ test("migration enforces profile ownership, allowlist, identity and private worl
             installation_id: null,
           },
         ]);
+      },
+    );
+    await t.test(
+      "service role can resolve the connected project without direct write privileges",
+      async () => {
+        await db.exec("set role service_role");
+        try {
+          const project = await db.query(
+            "select world_id from public.projects where github_repo_id=$1 and github_node_id=$2 limit 2",
+            [1358198956, "R_kgDOUPR4rA"],
+          );
+          assert.deepEqual(project.rows, [{ world_id: world }]);
+          await assert.rejects(
+            db.query("update public.projects set github_repo='Denied'"),
+            /permission denied/,
+          );
+          await assert.rejects(
+            db.query("select id from public.quests"),
+            /permission denied/,
+          );
+          await assert.rejects(
+            db.query("select id from public.github_deliveries"),
+            /permission denied/,
+          );
+        } finally {
+          await db.exec("reset role");
+        }
       },
     );
     await t.test(
@@ -538,6 +568,143 @@ test("migration enforces profile ownership, allowlist, identity and private worl
         );
       },
     );
+    for (const kind of ["issue", "pull_request"] as const) {
+      await t.test(
+        `${kind} webhook ingestion ignores stale state and allows a later reopen`,
+        async () => {
+          const itemId = kind === "issue" ? 901 : 902;
+          const secret = "local regression secret";
+          async function deliver(
+            action: string,
+            updatedAt: string,
+            title: string,
+            number: number,
+          ) {
+            const rawBody = JSON.stringify({
+              action,
+              repository: {
+                id: 1358198956,
+                node_id: "R_kgDOUPR4rA",
+                owner: { login: "guswl03" },
+                name: "teamworld",
+              },
+              [kind]: {
+                id: itemId,
+                node_id: `node-${title}`,
+                number,
+                title,
+                state: action === "closed" ? "closed" : "open",
+                updated_at: updatedAt,
+              },
+            });
+            return processGitHubWebhook(
+              {
+                rawBody,
+                signature: `sha256=${createHmac("sha256", secret).update(rawBody).digest("hex")}`,
+                deliveryId: `${kind}-${action}-${updatedAt}`,
+                eventName: kind === "issue" ? "issues" : "pull_request",
+                secret,
+              },
+              {
+                ingest: async (event) => {
+                  const result = await ingest({ ...event, world_id: world });
+                  return { duplicate: result.duplicate as boolean };
+                },
+              },
+            );
+          }
+          async function savedQuest() {
+            return (
+              await db.query(
+                "select title,status,github_node_id,github_number,updated_at from public.quests where github_item_id=$1",
+                [itemId],
+              )
+            ).rows[0];
+          }
+          assert.equal(
+            (await deliver("closed", "2026-09-06T08:00:00Z", "Current", 91))
+              .status,
+            200,
+          );
+          const current = await savedQuest();
+          assert.equal((current as { status: string }).status, "completed");
+          assert.equal(
+            (await deliver("opened", "2026-09-06T07:00:00Z", "Stale", 92))
+              .status,
+            200,
+          );
+          assert.deepEqual(await savedQuest(), current);
+          assert.deepEqual(
+            (
+              await db.query(
+                "select github_updated_at from public.quests where github_item_id=$1",
+                [itemId],
+              )
+            ).rows,
+            [{ github_updated_at: new Date("2026-09-06T08:00:00Z") }],
+          );
+          assert.deepEqual(
+            (await deliver("opened", "2026-09-06T07:00:00Z", "Stale", 92)).body,
+            { status: "duplicate" },
+          );
+          assert.equal(
+            (
+              await db.query(
+                "select id from public.github_deliveries where delivery_id like $1",
+                [`${kind}-%`],
+              )
+            ).rows.length,
+            2,
+          );
+          assert.equal(
+            (
+              await db.query(
+                "select id from realtime.sent_messages where payload->>'delivery_id' like $1",
+                [`${kind}-%`],
+              )
+            ).rows.length,
+            2,
+          );
+          assert.equal(
+            (await deliver("reopened", "2026-09-06T09:00:00Z", "Reopened", 93))
+              .status,
+            200,
+          );
+          assert.deepEqual(
+            (
+              await db.query(
+                "select title,status,github_node_id,github_number,github_updated_at from public.quests where github_item_id=$1",
+                [itemId],
+              )
+            ).rows,
+            [
+              {
+                title: "Reopened",
+                status: "open",
+                github_node_id: "node-Reopened",
+                github_number: 93,
+                github_updated_at: new Date("2026-09-06T09:00:00Z"),
+              },
+            ],
+          );
+          assert.equal(
+            (
+              await deliver(
+                "edited",
+                "2026-09-06T09:00:00Z",
+                "Same instant",
+                94,
+              )
+            ).status,
+            200,
+          );
+          assert.equal(
+            ((await savedQuest()) as { title: string }).title,
+            "Same instant",
+          );
+        },
+      );
+    }
   } finally {
     await db.close();
   }
