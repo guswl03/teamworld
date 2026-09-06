@@ -300,12 +300,16 @@ export async function loadPersistedGitHubQuests(
 }
 
 export function presentGitHubQuest(quest: GitHubQuest) {
+  const kind = quest.quest.kind === "issue" ? "ISSUE" : "PR";
+  const status = quest.quest.status.toUpperCase();
+  const event = `${quest.event === "issues" ? "ISSUES" : "PULL REQUEST"} · ${
+    quest.action?.replaceAll("_", " ").toUpperCase() ?? "SAVED STATE"
+  }`;
   return {
-    kind: quest.quest.kind === "issue" ? "ISSUE" : "PR",
+    kind,
     number: `#${quest.quest.number}`,
-    status: quest.quest.status.toUpperCase(),
-    event: `${quest.event === "issues" ? "ISSUES" : "PULL REQUEST"} · ${
-      quest.action?.replaceAll("_", " ").toUpperCase() ?? "SAVED STATE"
-    }`,
+    status,
+    event,
+    announcement: `GitHub 퀘스트 업데이트: ${quest.quest.title} · ${status} · ${event}`,
   };
 }

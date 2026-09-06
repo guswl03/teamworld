@@ -6,6 +6,7 @@ import {
 
 export function GitHubQuestFeed({ quests }: { quests: GitHubQuest[] }) {
   const newest = quests[0];
+  const newestPresentation = newest ? presentGitHubQuest(newest) : null;
   return (
     <section
       className="github-quest-feed"
@@ -25,7 +26,7 @@ export function GitHubQuestFeed({ quests }: { quests: GitHubQuest[] }) {
         aria-live="polite"
         aria-atomic="true"
       >
-        {newest ? `GitHub 퀘스트 업데이트: ${newest.quest.title}` : ""}
+        {newestPresentation?.announcement ?? ""}
       </p>
       {quests.length === 0 ? (
         <p className="github-quest-empty">{GITHUB_QUEST_EMPTY_COPY}</p>

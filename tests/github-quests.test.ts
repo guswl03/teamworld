@@ -312,6 +312,8 @@ test("quest presentation distinguishes issue, pull request, state, and empty cop
     number: "#12",
     status: "OPEN",
     event: "ISSUES · OPENED",
+    announcement:
+      "GitHub 퀘스트 업데이트: Ship quests · OPEN · ISSUES · OPENED",
   });
   const pullRequest = presentGitHubQuest(
     validQuest({
@@ -329,6 +331,8 @@ test("quest presentation distinguishes issue, pull request, state, and empty cop
     number: "#12",
     status: "COMPLETED",
     event: "PULL REQUEST · SAVED STATE",
+    announcement:
+      "GitHub 퀘스트 업데이트: Ship quests · COMPLETED · PULL REQUEST · SAVED STATE",
   });
   assert.equal(
     GITHUB_QUEST_EMPTY_COPY,

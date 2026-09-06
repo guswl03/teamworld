@@ -4,9 +4,7 @@ import { isPlayer, mergePresence } from "./transport";
 import { createChatGate, normalizeChat } from "./chat";
 import {
   loadPersistedGitHubQuests,
-  mergeGitHubQuests,
   validateGitHubQuestEvent,
-  type GitHubQuest,
   type GitHubQuestLoaderClient,
 } from "./github-quests";
 export function createSupabaseTransport(
@@ -19,7 +17,9 @@ export function createSupabaseTransport(
   let peers: Player[] = [];
   let ready = false;
   let closed = false;
-  let quests: GitHubQuest[] = [];
+  let questRefreshPending = false;
+  let questRefreshRunning = false;
+  let connectionGeneration = 0;
   const chatGate = createChatGate();
   const channel = client.channel(`world:${self.world_id}`, {
     config: {
@@ -35,6 +35,29 @@ export function createSupabaseTransport(
         if (result !== "ok" && !closed) callbacks.connection("disconnected");
       });
   };
+  const startQuestRefresh = () => {
+    if (questRefreshRunning || closed || !ready) return;
+    questRefreshRunning = true;
+    void (async () => {
+      while (!closed && ready && questRefreshPending) {
+        questRefreshPending = false;
+        const generation = connectionGeneration;
+        const persisted = await loadPersistedGitHubQuests(
+          client as unknown as GitHubQuestLoaderClient,
+          self.world_id,
+        );
+        if (closed || !ready || generation !== connectionGeneration) return;
+        if (!questRefreshPending) callbacks.quests?.(persisted);
+      }
+    })().finally(() => {
+      questRefreshRunning = false;
+      if (!closed && ready && questRefreshPending) startQuestRefresh();
+    });
+  };
+  const requestQuestRefresh = () => {
+    questRefreshPending = true;
+    startQuestRefresh();
+  };
   channel
     .on("broadcast", { event: "world_chat" }, ({ payload }) => {
       if (closed || !ready) return;
@@ -45,14 +68,7 @@ export function createSupabaseTransport(
       if (closed || !ready) return;
       const quest = validateGitHubQuestEvent(payload, self.world_id);
       if (!quest) return;
-      const next = mergeGitHubQuests(quests, [quest]);
-      if (
-        next.length === quests.length &&
-        next.every((item, index) => item === quests[index])
-      )
-        return;
-      quests = next;
-      callbacks.quests?.(quests);
+      requestQuestRefresh();
     })
     .on("presence", { event: "sync" }, () => {
       peers = mergePresence(
@@ -91,6 +107,7 @@ export function createSupabaseTransport(
     .then(() => {
       if (closed) return;
       channel.subscribe((state) => {
+        const wasReady = ready;
         ready = state === "SUBSCRIBED";
         if (closed) return;
         callbacks.connection(
@@ -103,16 +120,11 @@ export function createSupabaseTransport(
               : "connecting",
         );
         if (ready) {
+          if (!wasReady) connectionGeneration += 1;
           track();
-          void loadPersistedGitHubQuests(
-            client as unknown as GitHubQuestLoaderClient,
-            self.world_id,
-          ).then((persisted) => {
-            if (closed || !ready) return;
-            quests = mergeGitHubQuests(quests, persisted);
-            callbacks.quests?.(quests);
-          });
+          requestQuestRefresh();
         } else {
+          if (wasReady) connectionGeneration += 1;
           peers = [];
           publish();
         }
@@ -169,6 +181,7 @@ export function createSupabaseTransport(
     close() {
       closed = true;
       ready = false;
+      connectionGeneration += 1;
       clearInterval(heartbeat);
       void client.removeChannel(channel);
     },
